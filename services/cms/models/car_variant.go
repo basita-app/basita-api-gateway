@@ -2,33 +2,33 @@ package models
 
 // CarVariant represents a car variant/trim in the system
 type CarVariant struct {
-	Name        string                         `json:"name"`
-	CarModel    *RelationField[CarModel]       `json:"carModel,omitempty"`
-	Price       int                            `json:"price"`
-	Year        int                            `json:"year"`
-	Images      *MediaCollectionField          `json:"images,omitempty"`
-	Specs       []SpecsComponent               `json:"specs,omitempty"`
-	Features    map[string]interface{}         `json:"features,omitempty"`
-	BrochureURL string                         `json:"brochureURL,omitempty"`
-	DisplayName string                         `json:"displayName,omitempty"`
+	Name        string                         `json:"Name"`
+	CarModel    *RelationField[CarModel]       `json:"CarModel,omitempty"`
+	Price       int                            `json:"Price"`
+	Year        int                            `json:"Year"`
+	Images      *MediaCollectionField          `json:"Images,omitempty"`
+	Specs       []SpecsComponent               `json:"Specs,omitempty"`
+	Features    map[string]interface{}         `json:"Features,omitempty"`
+	BrochureURL string                         `json:"BrochureURL,omitempty"`
+	DisplayName string                         `json:"DisplayName,omitempty"`
 }
 
 // SpecsComponent represents the specs embedded component
 type SpecsComponent struct {
-	Motor                int     `json:"motor,omitempty"`
-	Speed                int     `json:"speed,omitempty"`
-	Transmission         string  `json:"transmission,omitempty"`
-	Horsepower           int     `json:"horsepower,omitempty"`
-	LiterPerKM           float64 `json:"literPerKM,omitempty"`
-	MaxSpeed             int     `json:"maxSpeed,omitempty"`
-	Origin               string  `json:"origin,omitempty"`
-	AssembledIn          string  `json:"assembledIn,omitempty"`
-	Acceleration         float64 `json:"acceleration,omitempty"`
-	LengthInMM           int     `json:"lengthInMM,omitempty"`
-	WidthInMM            int     `json:"widthInMM,omitempty"`
-	HeightInMM           int     `json:"heightInMM,omitempty"`
-	GroundClearanceInMM  int     `json:"groundClearanceInMM,omitempty"`
-	WheelBase            int     `json:"wheelBase,omitempty"`
+	Motor                int     `json:"Motor,omitempty"`
+	Speed                int     `json:"Speed,omitempty"`
+	Transmission         string  `json:"Transmission,omitempty"`
+	Horsepower           int     `json:"Horsepower,omitempty"`
+	LiterPerKM           float64 `json:"LiterPerKM,omitempty"`
+	MaxSpeed             int     `json:"MaxSpeed,omitempty"`
+	Origin               string  `json:"Origin,omitempty"`
+	AssembledIn          string  `json:"AssembledIn,omitempty"`
+	Acceleration         float64 `json:"Acceleration,omitempty"`
+	LengthInMM           int     `json:"LengthInMM,omitempty"`
+	WidthInMM            int     `json:"WidthInMM,omitempty"`
+	HeightInMM           int     `json:"HeightInMM,omitempty"`
+	GroundClearanceInMM  int     `json:"GroundClearanceInMM,omitempty"`
+	WheelBase            int     `json:"WheelBase,omitempty"`
 }
 
 // CarVariantResponse is a convenience type for car variant API responses

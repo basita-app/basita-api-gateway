@@ -2,39 +2,29 @@ package models
 
 // Common Strapi field types that can be reused across models
 
-// MediaField represents a Strapi media field (single image, video, file)
+// MediaField represents a Strapi 5 media field (single image, video, file)
+// In Strapi 5, media data is returned flat (not wrapped in data/attributes)
 type MediaField struct {
-	Data *MediaData `json:"data,omitempty"`
+	ID               int                  `json:"id"`
+	DocumentID       string               `json:"documentId,omitempty"`
+	Name             string               `json:"name"`
+	AlternativeText  *string              `json:"alternativeText,omitempty"`
+	Caption          *string              `json:"caption,omitempty"`
+	Width            int                  `json:"width,omitempty"`
+	Height           int                  `json:"height,omitempty"`
+	Formats          *MediaFormats        `json:"formats,omitempty"`
+	Hash             string               `json:"hash"`
+	Ext              string               `json:"ext"`
+	Mime             string               `json:"mime"`
+	Size             float64              `json:"size"`
+	URL              string               `json:"url"`
+	PreviewURL       *string              `json:"previewUrl,omitempty"`
+	Provider         string               `json:"provider"`
+	ProviderMetadata interface{}          `json:"provider_metadata,omitempty"`
 }
 
-// MediaCollectionField represents a Strapi media field (multiple files)
-type MediaCollectionField struct {
-	Data []MediaData `json:"data,omitempty"`
-}
-
-// MediaData contains the media file information
-type MediaData struct {
-	ID         int               `json:"id"`
-	Attributes MediaAttributes   `json:"attributes"`
-}
-
-// MediaAttributes contains the media file attributes
-type MediaAttributes struct {
-	Name              string               `json:"name"`
-	AlternativeText   string               `json:"alternativeText,omitempty"`
-	Caption           string               `json:"caption,omitempty"`
-	Width             int                  `json:"width,omitempty"`
-	Height            int                  `json:"height,omitempty"`
-	Formats           *MediaFormats        `json:"formats,omitempty"`
-	Hash              string               `json:"hash"`
-	Ext               string               `json:"ext"`
-	Mime              string               `json:"mime"`
-	Size              float64              `json:"size"`
-	URL               string               `json:"url"`
-	PreviewURL        string               `json:"previewUrl,omitempty"`
-	Provider          string               `json:"provider"`
-	ProviderMetadata  interface{}          `json:"provider_metadata,omitempty"`
-}
+// MediaCollectionField represents a Strapi 5 media field (multiple files)
+type MediaCollectionField []MediaField
 
 // MediaFormats contains different sizes of media files
 type MediaFormats struct {

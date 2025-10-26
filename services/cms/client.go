@@ -199,6 +199,9 @@ func (c *CMSClient) doRequest(ctx context.Context, method, url string) ([]byte, 
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	}
 
+	// Debug logging
+	fmt.Printf("[CMS Client] %s %s\n", method, url)
+
 	// Execute request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -215,6 +218,13 @@ func (c *CMSClient) doRequest(ctx context.Context, method, url string) ([]byte, 
 			StatusCode: resp.StatusCode,
 			Message:    fmt.Sprintf("failed to read response body: %v", err),
 		}
+	}
+
+	// Debug logging
+	fmt.Printf("[CMS Client] Response Status: %d\n", resp.StatusCode)
+	fmt.Printf("[CMS Client] Response Body (first 500 chars): %s\n", string(body[:min(500, len(body))]))
+	if resp.StatusCode >= 400 {
+		fmt.Printf("[CMS Client] Error Body: %s\n", string(body))
 	}
 
 	// Check for errors

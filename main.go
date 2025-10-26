@@ -3,9 +3,11 @@ package main
 import (
 	"api-gateway/pkg/cache"
 	"api-gateway/services/cms"
+	"api-gateway/services/cms/models"
 	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,10 +15,16 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found or error loading it")
+	}
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		AppName: "API Gateway",
@@ -67,6 +75,11 @@ func main() {
 	}
 	cmsServiceToken := os.Getenv("CMS_SERVICE_TOKEN")
 
+	// Debug: Check if token is loaded
+	if cmsServiceToken == "" {
+		log.Println("WARNING: CMS_SERVICE_TOKEN is not set!")
+	}
+
 	var cmsCache cache.Cache
 	if redisClient != nil {
 		cmsCache = cache.NewRedisCache(redisClient, "cms:")
@@ -82,11 +95,78 @@ func main() {
 		DefaultCacheTTL: 10 * time.Minute,
 	})
 
-	// Initialize CMS services (example - add your actual services here)
-	_ = cmsClient // Use cmsClient to initialize your specific resource services
-	// Example:
-	// articleService := cms.NewArticleService(cmsClient)
-	// homepageService := cms.NewHomepageService(cmsClient)
+	// Initialize CMS services
+	brandService := cms.NewBrandService(cmsClient)
+	_ = cms.NewCarModelService(cmsClient)
+	_ = cms.NewCarVariantService(cmsClient)
+	_ = cms.NewCityService(cmsClient)
+	_ = cms.NewGovernorateService(cmsClient)
+	_ = cms.NewShowroomService(cmsClient)
+
+	// CMS API Routes
+	cmsGroup := app.Group("/api/cms")
+
+	// Brands endpoints
+	cmsGroup.Get("/brands", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		// Extract locale from Accept-Language header
+		// Keep the full locale code (e.g., "ar-EG", "en")
+		locale := c.Get("Accept-Language")
+		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
+		if locale != "" {
+			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
+				locale = locale[:commaIdx]
+			}
+			locale = strings.TrimSpace(locale)
+		}
+
+		opts := models.CollectionOptions{
+			Page:     c.QueryInt("page", 1),
+			PageSize: c.QueryInt("pageSize", 25),
+			Populate: c.Query("populate", "*"),
+			Locale:   locale,
+		}
+
+		brands, err := brandService.GetAll(ctx, opts, true)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(brands)
+	})
+
+	cmsGroup.Get("/brands/:id", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		id := c.Params("id")
+
+		// Extract locale from Accept-Language header
+		// Keep the full locale code (e.g., "ar-EG", "en")
+		locale := c.Get("Accept-Language")
+		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
+		if locale != "" {
+			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
+				locale = locale[:commaIdx]
+			}
+			locale = strings.TrimSpace(locale)
+		}
+
+		opts := models.ItemOptions{
+			Populate: c.Query("populate", "*"),
+			Locale:   locale,
+		}
+
+		brand, err := brandService.GetByID(ctx, id, opts, true)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Brand not found",
+			})
+		}
+
+		return c.JSON(brand)
+	})
 
 	// Cache Management Endpoint
 	cacheSecretKey := os.Getenv("CACHE_SECRET_KEY")

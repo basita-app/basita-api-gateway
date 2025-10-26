@@ -2,7 +2,7 @@ package models
 
 // Governorate represents a governorate in the system
 type Governorate struct {
-	Name string `json:"name"`
+	Name string `json:"Name"`
 }
 
 // GovernorateResponse is a convenience type for governorate API responses
