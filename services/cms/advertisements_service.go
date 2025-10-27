@@ -1,0 +1,79 @@
+package cms
+
+import (
+	"api-gateway/services/cms/models"
+	"context"
+	"encoding/json"
+	"time"
+)
+
+// AdvertisementService handles operations for the advertisements resource
+type AdvertisementService struct {
+	client   Client
+	endpoint string
+	cacheTTL time.Duration
+}
+
+// NewAdvertisementService creates a new service for advertisements
+func NewAdvertisementService(client Client) *AdvertisementService {
+	return &AdvertisementService{
+		client:   client,
+		endpoint: "advertisements",
+		cacheTTL: 15 * time.Minute, // Shorter cache for ads that may change frequently
+	}
+}
+
+// GetAll fetches all advertisements with optional filters
+func (s *AdvertisementService) GetAll(ctx context.Context, opts models.CollectionOptions, useCache bool) (*models.AdvertisementCollectionResponse, error) {
+	var cacheOpts *models.CacheOptions
+	if useCache {
+		cacheOpts = &models.CacheOptions{
+			Enabled: true,
+			TTL:     s.cacheTTL,
+		}
+	}
+
+	data, err := s.client.GetCollection(ctx, s.endpoint, opts, cacheOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	var response models.AdvertisementCollectionResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, &models.RequestError{
+			Message: "failed to unmarshal advertisements: " + err.Error(),
+		}
+	}
+
+	return &response, nil
+}
+
+// GetByID fetches a single advertisement by ID
+func (s *AdvertisementService) GetByID(ctx context.Context, id string, opts models.ItemOptions, useCache bool) (*models.AdvertisementResponse, error) {
+	var cacheOpts *models.CacheOptions
+	if useCache {
+		cacheOpts = &models.CacheOptions{
+			Enabled: true,
+			TTL:     s.cacheTTL,
+		}
+	}
+
+	data, err := s.client.GetItem(ctx, s.endpoint, id, opts, cacheOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	var response models.AdvertisementResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, &models.RequestError{
+			Message: "failed to unmarshal advertisement: " + err.Error(),
+		}
+	}
+
+	return &response, nil
+}
+
+// InvalidateCache invalidates all cached advertisements
+func (s *AdvertisementService) InvalidateCache(ctx context.Context) error {
+	return s.client.InvalidateCache(ctx, s.endpoint+"*")
+}

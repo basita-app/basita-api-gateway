@@ -52,9 +52,9 @@ func main() {
 	redisDB := 0 // Use DB 0 for CMS cache
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       redisDB,
+		Addr:            redisAddr,
+		Password:        redisPassword,
+		DB:              redisDB,
 	})
 
 	// Test Redis connection
@@ -97,6 +97,7 @@ func main() {
 
 	// Initialize CMS services
 	brandService := cms.NewBrandService(cmsClient)
+	advertisementService := cms.NewAdvertisementService(cmsClient)
 	_ = cms.NewCarModelService(cmsClient)
 	_ = cms.NewCarVariantService(cmsClient)
 	_ = cms.NewCityService(cmsClient)
@@ -166,6 +167,68 @@ func main() {
 		}
 
 		return c.JSON(brand)
+	})
+
+	// Advertisements endpoints
+	cmsGroup.Get("/advertisements", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		// Extract locale from Accept-Language header
+		// Keep the full locale code (e.g., "ar-EG", "en")
+		locale := c.Get("Accept-Language")
+		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
+		if locale != "" {
+			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
+				locale = locale[:commaIdx]
+			}
+			locale = strings.TrimSpace(locale)
+		}
+
+		opts := models.CollectionOptions{
+			Page:     c.QueryInt("page", 1),
+			PageSize: c.QueryInt("pageSize", 25),
+			Populate: c.Query("populate", "*"),
+			Locale:   locale,
+		}
+
+		advertisements, err := advertisementService.GetAll(ctx, opts, true)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(advertisements)
+	})
+
+	cmsGroup.Get("/advertisements/:id", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		id := c.Params("id")
+
+		// Extract locale from Accept-Language header
+		// Keep the full locale code (e.g., "ar-EG", "en")
+		locale := c.Get("Accept-Language")
+		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
+		if locale != "" {
+			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
+				locale = locale[:commaIdx]
+			}
+			locale = strings.TrimSpace(locale)
+		}
+
+		opts := models.ItemOptions{
+			Populate: c.Query("populate", "*"),
+			Locale:   locale,
+		}
+
+		advertisement, err := advertisementService.GetByID(ctx, id, opts, true)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Advertisement not found",
+			})
+		}
+
+		return c.JSON(advertisement)
 	})
 
 	// Cache Management Endpoint
