@@ -2,12 +2,21 @@ package models
 
 // Advertisement represents an advertisement banner in the CMS
 type Advertisement struct {
-	Action string      `json:"Action"`
-	Banner *MediaField `json:"Banner,omitempty"`
+	Action string      `json:"action"`
+	Banner *MediaField `json:"banner,omitempty"`
 }
 
-// AdvertisementResponse wraps a single Advertisement in Strapi's response format
-type AdvertisementResponse = StrapiResponse[Advertisement]
+// AdvertisementData represents a simplified advertisement with only essential fields
+type AdvertisementData struct {
+	ID     int         `json:"id"`
+	Action string      `json:"action"`
+	Banner *MediaField `json:"banner,omitempty"`
+}
 
-// AdvertisementCollectionResponse wraps multiple Advertisements in Strapi's response format
-type AdvertisementCollectionResponse = StrapiCollectionResponse[Advertisement]
+// AdvertisementResponse represents a single advertisement response with only id, action, and banner
+type AdvertisementResponse struct {
+	Data *AdvertisementData `json:"data"`
+}
+
+// AdvertisementCollectionResponse represents all advertisements without pagination
+type AdvertisementCollectionResponse []AdvertisementData

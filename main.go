@@ -90,9 +90,9 @@ func main() {
 	cmsClient := cms.NewCMSClient(cms.Config{
 		BaseURL:         cmsServiceURL,
 		Token:           cmsServiceToken,
-		RequestTimeout:  30 * time.Second,
+		RequestTimeout:  10 * time.Second,
 		Cache:           cmsCache,
-		DefaultCacheTTL: 10 * time.Minute,
+		DefaultCacheTTL: 24 * time.Hour,
 	})
 
 	// Initialize CMS services
@@ -104,6 +104,13 @@ func main() {
 	_ = cms.NewGovernorateService(cmsClient)
 	_ = cms.NewShowroomService(cmsClient)
 
+	app.Get("/uploads/:path", func(c *fiber.Ctx) error {
+		path := c.Params("path")
+		cmsUrlWithoutAPI := strings.TrimSuffix(cmsServiceURL, "/api")
+		println(cmsUrlWithoutAPI)
+		url := cmsUrlWithoutAPI + "/uploads/" + path
+		return proxy.Do(c, url)
+	})
 	// CMS API Routes
 	cmsGroup := app.Group("/api/cms")
 
