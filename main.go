@@ -37,9 +37,18 @@ func main() {
 	// Health check route
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
-			"status": "ok",
+			"status":  "ok",
 			"service": "api-gateway",
 		})
+	})
+
+	// API Documentation
+	app.Get("/api-docs", func(c *fiber.Ctx) error {
+		return c.SendFile("./index.html")
+	})
+
+	app.Get("/openapi.yaml", func(c *fiber.Ctx) error {
+		return c.SendFile("./openapi.yaml")
 	})
 
 	// Initialize Redis client for caching

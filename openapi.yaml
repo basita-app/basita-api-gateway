@@ -1,0 +1,650 @@
+openapi: 3.0.3
+info:
+  title: Basita API Gateway - CMS Endpoints
+  description: API Gateway for CMS (Content Management System) operations including advertisements, brands, and car models
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check endpoint
+  - name: Advertisements
+    description: Advertisement management endpoints
+  - name: Brands
+    description: Brand management endpoints
+  - name: Car Models
+    description: Car model management endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns the health status of the API Gateway service
+      operationId: getHealth
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: "ok"
+                service: "api-gateway"
+
+  /api/cms/advertisements:
+    get:
+      tags:
+        - Advertisements
+      summary: Get all advertisements
+      description: Retrieves a list of all advertisements with their banners
+      operationId: getAdvertisements
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Advertisement'
+              example:
+                - id: "zcp8md8k7nrciuwqcc083o5b"
+                  action: "brand/1"
+                  banner:
+                    id: "ky89f23cr0v1wbq5a7kgo4le"
+                    width: 1342
+                    height: 1100
+                    url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+                    formats:
+                      thumbnail:
+                        width: 190
+                        height: 156
+                        url: "http://localhost:3001/uploads/thumbnail_toyota_logo_png_1_d871d2a03a.png"
+                      small:
+                        width: 500
+                        height: 410
+                        url: "http://localhost:3001/uploads/small_toyota_logo_png_1_d871d2a03a.png"
+                      medium:
+                        width: 750
+                        height: 615
+                        url: "http://localhost:3001/uploads/medium_toyota_logo_png_1_d871d2a03a.png"
+                      large:
+                        width: 1000
+                        height: 820
+                        url: "http://localhost:3001/uploads/large_toyota_logo_png_1_d871d2a03a.png"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cms/brands:
+    get:
+      tags:
+        - Brands
+      summary: Get all brands
+      description: Retrieves a simplified list of all brands with their logos
+      operationId: getBrands
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimpleBrand'
+              example:
+                - id: "ickxh9k2oiqsy90ms7hdxtl6"
+                  title: "Toyota"
+                  thumbnail:
+                    id: "ky89f23cr0v1wbq5a7kgo4le"
+                    width: 1342
+                    height: 1100
+                    url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+                    formats:
+                      thumbnail:
+                        width: 190
+                        height: 156
+                        url: "http://localhost:3001/uploads/thumbnail_toyota_logo_png_1_d871d2a03a.png"
+                      small:
+                        width: 500
+                        height: 410
+                        url: "http://localhost:3001/uploads/small_toyota_logo_png_1_d871d2a03a.png"
+                      medium:
+                        width: 750
+                        height: 615
+                        url: "http://localhost:3001/uploads/medium_toyota_logo_png_1_d871d2a03a.png"
+                      large:
+                        width: 1000
+                        height: 820
+                        url: "http://localhost:3001/uploads/large_toyota_logo_png_1_d871d2a03a.png"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cms/brands/{id}:
+    get:
+      tags:
+        - Brands
+      summary: Get brand by ID
+      description: Retrieves a single brand by its document ID
+      operationId: getBrandById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The brand document ID
+          schema:
+            type: string
+          example: "ickxh9k2oiqsy90ms7hdxtl6"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleBrand'
+        '404':
+          description: Brand not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cms/brands/{id}/cars:
+    get:
+      tags:
+        - Car Models
+      summary: Get car models by brand ID
+      description: Retrieves all car models for a specific brand with pricing information
+      operationId: getCarModelsByBrand
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The brand document ID
+          schema:
+            type: string
+          example: "ickxh9k2oiqsy90ms7hdxtl6"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimpleCarModel'
+              example:
+                - id: "xtvnanfg7cmvws9llx2co0f9"
+                  title: "Corolla"
+                  thumbnail:
+                    id: "ky89f23cr0v1wbq5a7kgo4le"
+                    width: 1342
+                    height: 1100
+                    url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+                    formats:
+                      thumbnail:
+                        width: 190
+                        height: 156
+                        url: "http://localhost:3001/uploads/thumbnail_toyota_logo_png_1_d871d2a03a.png"
+                      small:
+                        width: 500
+                        height: 410
+                        url: "http://localhost:3001/uploads/small_toyota_logo_png_1_d871d2a03a.png"
+                      medium:
+                        width: 750
+                        height: 615
+                        url: "http://localhost:3001/uploads/medium_toyota_logo_png_1_d871d2a03a.png"
+                      large:
+                        width: 1000
+                        height: 820
+                        url: "http://localhost:3001/uploads/large_toyota_logo_png_1_d871d2a03a.png"
+                  pricefrom: 1300000
+                  priceto: 1300000
+                  marketpricefrom: 1320000
+                  marketpriceto: 1320000
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cms/cars/{id}:
+    get:
+      tags:
+        - Car Models
+      summary: Get detailed car model by ID
+      description: Retrieves detailed information about a specific car model including variants, showrooms, reviews, and catalogs
+      operationId: getCarModelById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The car model document ID
+          schema:
+            type: string
+          example: "xtvnanfg7cmvws9llx2co0f9"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedCarModel'
+              example:
+                id: "xtvnanfg7cmvws9llx2co0f9"
+                title: "Corolla"
+                images:
+                  - id: "ky89f23cr0v1wbq5a7kgo4le"
+                    width: 1342
+                    height: 1100
+                    url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+                    formats:
+                      thumbnail:
+                        width: 190
+                        height: 156
+                        url: "http://localhost:3001/uploads/thumbnail_toyota_logo_png_1_d871d2a03a.png"
+                      small:
+                        width: 500
+                        height: 410
+                        url: "http://localhost:3001/uploads/small_toyota_logo_png_1_d871d2a03a.png"
+                      medium:
+                        width: 750
+                        height: 615
+                        url: "http://localhost:3001/uploads/medium_toyota_logo_png_1_d871d2a03a.png"
+                      large:
+                        width: 1000
+                        height: 820
+                        url: "http://localhost:3001/uploads/large_toyota_logo_png_1_d871d2a03a.png"
+                  - id: "i847v4mpb8rp9i6zmru5w4sk"
+                    width: 24
+                    height: 24
+                    url: "http://localhost:3001/uploads/used_car_6fc1cfcb35.svg"
+                pricefrom: 1300000
+                priceto: 1300000
+                marketpricefrom: 1320000
+                marketpriceto: 1320000
+                mindownpayment: 450000
+                mininstallments: 35000
+                warranty: "3years/100000KM"
+                variants:
+                  - id: "r3q8tcnki4uy1qpjn2x5lo6d"
+                    year: 2025
+                    title: "Automatic/Active"
+                    cc: "1600CC"
+                    price: 1300000
+                showrooms:
+                  - id: "uhw6ascspyb2ofunrn8arp5g"
+                    title: "elemam"
+                    thumbnail:
+                      id: "w2iuapmcja2xdrligu0huj8n"
+                      width: 24
+                      height: 24
+                      url: "http://localhost:3001/uploads/new_car_59bca33b34.svg"
+                    price: 1350000
+                    mindownpayment: 450000
+                    mininstallments: 35000
+                reviews:
+                  - id: 1
+                    youtubeurl: "https://localhost:3000/api"
+                catalogs:
+                  - id: 1
+                    downloadurl: "https://localhost:3000/api"
+        '404':
+          description: Car model not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    MediaFormat:
+      type: object
+      description: Represents a specific image format/size
+      required:
+        - width
+        - height
+        - url
+      properties:
+        width:
+          type: integer
+          description: Image width in pixels
+          example: 190
+        height:
+          type: integer
+          description: Image height in pixels
+          example: 156
+        url:
+          type: string
+          format: uri
+          description: Full URL to the image (prefixed with base URL)
+          example: "http://localhost:3001/uploads/thumbnail_toyota_logo_png_1_d871d2a03a.png"
+
+    MediaFormats:
+      type: object
+      description: Contains different sizes of media files
+      properties:
+        thumbnail:
+          $ref: '#/components/schemas/MediaFormat'
+        small:
+          $ref: '#/components/schemas/MediaFormat'
+        medium:
+          $ref: '#/components/schemas/MediaFormat'
+        large:
+          $ref: '#/components/schemas/MediaFormat'
+
+    MediaField:
+      type: object
+      description: Simplified Strapi media field with essential data
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+          description: Document ID from Strapi
+          example: "ky89f23cr0v1wbq5a7kgo4le"
+        width:
+          type: integer
+          description: Original image width in pixels
+          example: 1342
+        height:
+          type: integer
+          description: Original image height in pixels
+          example: 1100
+        url:
+          type: string
+          format: uri
+          description: Full URL to the media file (prefixed with base URL)
+          example: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+        formats:
+          $ref: '#/components/schemas/MediaFormats'
+
+    Advertisement:
+      type: object
+      description: Advertisement with banner image
+      required:
+        - id
+        - action
+      properties:
+        id:
+          type: string
+          description: Advertisement document ID
+          example: "zcp8md8k7nrciuwqcc083o5b"
+        action:
+          type: string
+          description: Action identifier (e.g., brand/1)
+          example: "brand/1"
+        banner:
+          $ref: '#/components/schemas/MediaField'
+
+    SimpleBrand:
+      type: object
+      description: Simplified brand representation
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+          description: Brand document ID
+          example: "ickxh9k2oiqsy90ms7hdxtl6"
+        title:
+          type: string
+          description: Brand name
+          example: "Toyota"
+        thumbnail:
+          $ref: '#/components/schemas/MediaField'
+
+    SimpleCarModel:
+      type: object
+      description: Simplified car model with pricing
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+          description: Car model document ID
+          example: "xtvnanfg7cmvws9llx2co0f9"
+        title:
+          type: string
+          description: Car model name
+          example: "Corolla"
+        thumbnail:
+          $ref: '#/components/schemas/MediaField'
+        pricefrom:
+          type: integer
+          description: Minimum price
+          example: 1300000
+        priceto:
+          type: integer
+          description: Maximum price
+          example: 1300000
+        marketpricefrom:
+          type: integer
+          description: Minimum market price
+          example: 1320000
+        marketpriceto:
+          type: integer
+          description: Maximum market price
+          example: 1320000
+
+    SimpleVariant:
+      type: object
+      description: Car variant information
+      required:
+        - id
+        - year
+        - title
+        - price
+      properties:
+        id:
+          type: string
+          description: Variant document ID
+          example: "r3q8tcnki4uy1qpjn2x5lo6d"
+        year:
+          type: integer
+          description: Model year
+          example: 2025
+        title:
+          type: string
+          description: Variant name
+          example: "Automatic/Active"
+        cc:
+          type: string
+          description: Engine capacity
+          example: "1600CC"
+        price:
+          type: integer
+          description: Variant price
+          example: 1300000
+
+    SimpleShowroom:
+      type: object
+      description: Showroom with pricing information
+      required:
+        - id
+        - title
+        - price
+      properties:
+        id:
+          type: string
+          description: Showroom document ID
+          example: "uhw6ascspyb2ofunrn8arp5g"
+        title:
+          type: string
+          description: Showroom name
+          example: "elemam"
+        thumbnail:
+          $ref: '#/components/schemas/MediaField'
+        price:
+          type: integer
+          description: Showroom price for the car
+          example: 1350000
+        mindownpayment:
+          type: integer
+          description: Minimum down payment
+          example: 450000
+        mininstallments:
+          type: integer
+          description: Minimum monthly installment
+          example: 35000
+
+    ReviewItem:
+      type: object
+      description: Review video information
+      required:
+        - id
+        - youtubeurl
+      properties:
+        id:
+          type: integer
+          description: Review ID
+          example: 1
+        youtubeurl:
+          type: string
+          format: uri
+          description: YouTube video URL
+          example: "https://localhost:3000/api"
+
+    CatalogItem:
+      type: object
+      description: Catalog/brochure download information
+      required:
+        - id
+        - downloadurl
+      properties:
+        id:
+          type: integer
+          description: Catalog ID
+          example: 1
+        downloadurl:
+          type: string
+          format: uri
+          description: Download URL for the catalog
+          example: "https://localhost:3000/api"
+
+    DetailedCarModel:
+      type: object
+      description: Detailed car model with all related information
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+          description: Car model document ID
+          example: "xtvnanfg7cmvws9llx2co0f9"
+        title:
+          type: string
+          description: Car model name
+          example: "Corolla"
+        images:
+          type: array
+          description: Array of car images
+          items:
+            $ref: '#/components/schemas/MediaField'
+        pricefrom:
+          type: integer
+          description: Minimum price
+          example: 1300000
+        priceto:
+          type: integer
+          description: Maximum price
+          example: 1300000
+        marketpricefrom:
+          type: integer
+          description: Minimum market price
+          example: 1320000
+        marketpriceto:
+          type: integer
+          description: Maximum market price
+          example: 1320000
+        mindownpayment:
+          type: integer
+          description: Minimum down payment
+          example: 450000
+        mininstallments:
+          type: integer
+          description: Minimum monthly installment
+          example: 35000
+        warranty:
+          type: string
+          description: Warranty information
+          example: "3years/100000KM"
+        variants:
+          type: array
+          description: Available variants
+          items:
+            $ref: '#/components/schemas/SimpleVariant'
+        showrooms:
+          type: array
+          description: Showrooms selling this car
+          items:
+            $ref: '#/components/schemas/SimpleShowroom'
+        reviews:
+          type: array
+          description: Review videos
+          items:
+            $ref: '#/components/schemas/ReviewItem'
+        catalogs:
+          type: array
+          description: Downloadable catalogs/brochures
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+
+    Health:
+      type: object
+      description: Health check response
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          description: Service health status
+          example: "ok"
+        service:
+          type: string
+          description: Service name
+          example: "api-gateway"
+
+    Error:
+      type: object
+      description: Error response
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Internal server error"
