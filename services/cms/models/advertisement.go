@@ -8,7 +8,7 @@ type Advertisement struct {
 
 // AdvertisementData represents a simplified advertisement with only essential fields
 type AdvertisementData struct {
-	ID     int         `json:"id"`
+	ID     string      `json:"id"`
 	Action string      `json:"action"`
 	Banner *MediaField `json:"banner,omitempty"`
 }

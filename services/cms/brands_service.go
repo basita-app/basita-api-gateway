@@ -118,7 +118,7 @@ func (s *BrandService) GetSimplified(ctx context.Context, opts models.Collection
 			}
 		}
 		simplifiedBrands[i] = models.SimpleBrand{
-			ID:        brandData.ID,
+			ID:        brandData.DocumentID,
 			Title:     brandData.Attributes.Name,
 			Thumbnail: thumbnail,
 		}

@@ -4,7 +4,6 @@ import (
 	"api-gateway/services/cms/models"
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -89,13 +88,13 @@ func (s *CarModelService) GetByBrandID(ctx context.Context, brandID string, useC
 		}
 	}
 
-	// Fetch car models filtered by brand ID
+	// Fetch car models filtered by brand documentId
 	opts := models.CollectionOptions{
 		PageSize: 1000,
 		Page:     1,
 		Populate: "*", // Populate brand and image relations
 		Filters: map[string]string{
-			"filters[brand][id][$eq]": brandID,
+			"filters[brand][documentId][$eq]": brandID,
 		},
 	}
 
@@ -121,9 +120,9 @@ func (s *CarModelService) GetByBrandID(ctx context.Context, brandID string, useC
 		variantOpts := models.CollectionOptions{
 			PageSize: 1000,
 			Page:     1,
-			Populate: "*",
+			Populate: "deep", // Use deep population to get all nested relations
 			Filters: map[string]string{
-				"filters[car_model][id][$eq]": fmt.Sprintf("%d", modelData.ID),
+				"filters[car_model][documentId][$eq]": modelData.DocumentID,
 			},
 		}
 		
@@ -167,7 +166,7 @@ func (s *CarModelService) GetByBrandID(ctx context.Context, brandID string, useC
 		}
 
 		simplifiedModels[i] = models.SimpleCarModel{
-			ID:              modelData.ID,
+			ID:              modelData.DocumentID,
 			Title:           modelData.Attributes.Name,
 			Thumbnail:       thumbnail,
 			PriceFrom:       priceFrom,
@@ -195,4 +194,196 @@ func (s *CarVariantService) getAllVariantsForModel(ctx context.Context, opts mod
 	}
 
 	return response.Data, nil
+}
+
+// GetDetailedByID fetches a detailed car model by ID with all variants and showrooms
+func (s *CarModelService) GetDetailedByID(ctx context.Context, id string, useCache bool) (*models.DetailedCarModel, error) {
+	var cacheOpts *models.CacheOptions
+	if useCache {
+		cacheOpts = &models.CacheOptions{
+			Enabled: true,
+			TTL:     s.cacheTTL,
+		}
+	}
+
+	// Fetch the car model
+	opts := models.ItemOptions{
+		Populate: "*",
+	}
+
+	data, err := s.client.GetItem(ctx, s.endpoint, id, opts, cacheOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	var carModelResponse models.CarModelResponse
+	if err := json.Unmarshal(data, &carModelResponse); err != nil {
+		return nil, &models.RequestError{
+			Message: "failed to unmarshal car model: " + err.Error(),
+		}
+	}
+
+	// Fetch variants for this car model
+	variantService := NewCarVariantService(s.client)
+	variantOpts := models.CollectionOptions{
+		PageSize: 1000,
+		Page:     1,
+		Populate: "deep", // Use deep population to get nested ShowroomPricing.Showroom relations
+		Filters: map[string]string{
+			"filters[car_model][documentId][$eq]": id,
+		},
+	}
+
+	variantData, err := variantService.getAllVariantsForModel(ctx, variantOpts, cacheOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize response
+	detailedModel := &models.DetailedCarModel{
+		ID:              carModelResponse.Data.DocumentID,
+		Title:           carModelResponse.Data.Attributes.Name,
+		Images:          carModelResponse.Data.Attributes.Images,
+		Variants:        make([]models.SimpleVariant, 0),
+		Showrooms:       make([]models.SimpleShowroom, 0),
+		Reviews:         make([]models.ReviewItem, 0),
+		Catalogs:        make([]models.CatalogItem, 0),
+	}
+
+	if len(variantData) == 0 {
+		return detailedModel, nil
+	}
+
+	// Process variants to calculate prices and collect data
+	priceFrom := variantData[0].Attributes.Price
+	priceTo := variantData[0].Attributes.Price
+	minDownPayment := 0
+	minInstallments := 0
+	warranty := ""
+
+	// Maps to track unique showrooms and reviews
+	showroomMap := make(map[string]*models.SimpleShowroom)
+	reviewMap := make(map[string]*models.ReviewItem)
+	catalogMap := make(map[string]*models.CatalogItem)
+	reviewIDCounter := 1
+	catalogIDCounter := 1
+
+	for _, variant := range variantData {
+		// Update price range
+		if variant.Attributes.Price < priceFrom {
+			priceFrom = variant.Attributes.Price
+		}
+		if variant.Attributes.Price > priceTo {
+			priceTo = variant.Attributes.Price
+		}
+
+		// Update min down payment and installments
+		if variant.Attributes.MinDownPayment > 0 {
+			if minDownPayment == 0 || variant.Attributes.MinDownPayment < minDownPayment {
+				minDownPayment = variant.Attributes.MinDownPayment
+			}
+		}
+		if variant.Attributes.MinInstallments > 0 {
+			if minInstallments == 0 || variant.Attributes.MinInstallments < minInstallments {
+				minInstallments = variant.Attributes.MinInstallments
+			}
+		}
+
+		// Get warranty (use first non-empty warranty)
+		if warranty == "" && variant.Attributes.Warranty != "" {
+			warranty = variant.Attributes.Warranty
+		}
+
+		// Add variant to list
+		cc := ""
+		if variant.Attributes.Specs != nil {
+			cc = variant.Attributes.Specs.Motor
+		}
+
+		detailedModel.Variants = append(detailedModel.Variants, models.SimpleVariant{
+			ID:    variant.DocumentID,
+			Year:  variant.Attributes.Year,
+			Title: variant.Attributes.Name,
+			CC:    cc,
+			Price: variant.Attributes.Price,
+		})
+
+		// Process showrooms from ShowroomPricing
+		if variant.Attributes.ShowroomPricing != nil {
+			for _, pricing := range variant.Attributes.ShowroomPricing {
+				if pricing.Showroom != nil && pricing.Showroom.Data != nil && pricing.Showroom.Data.DocumentID != "" {
+					showroomDocID := pricing.Showroom.Data.DocumentID
+					showroom := pricing.Showroom.Data.Attributes
+
+					// Extract thumbnail from showroom logo
+					var thumbnail *models.MediaField
+					if showroom.Logo != nil {
+						thumbnail = showroom.Logo
+					}
+
+					// Check if showroom already exists, keep the one with minimum price
+					if existing, exists := showroomMap[showroomDocID]; exists {
+						if pricing.Price < existing.Price {
+							existing.Price = pricing.Price
+							existing.MinDownPayment = pricing.MinDownPayment
+							existing.MinInstallments = pricing.MinInstallments
+						}
+					} else {
+						showroomMap[showroomDocID] = &models.SimpleShowroom{
+							ID:              showroomDocID,
+							Title:           showroom.Name,
+							Thumbnail:       thumbnail,
+							Price:           pricing.Price,
+							MinDownPayment:  pricing.MinDownPayment,
+							MinInstallments: pricing.MinInstallments,
+						}
+					}
+				}
+			}
+		}
+
+		// Process review links
+		if variant.Attributes.ReviewLink != "" {
+			if _, exists := reviewMap[variant.Attributes.ReviewLink]; !exists {
+				reviewMap[variant.Attributes.ReviewLink] = &models.ReviewItem{
+					ID:         reviewIDCounter,
+					YoutubeURL: variant.Attributes.ReviewLink,
+				}
+				reviewIDCounter++
+			}
+		}
+
+		// Process catalogs/brochures
+		if variant.Attributes.BrochureURL != "" {
+			if _, exists := catalogMap[variant.Attributes.BrochureURL]; !exists {
+				catalogMap[variant.Attributes.BrochureURL] = &models.CatalogItem{
+					ID:          catalogIDCounter,
+					DownloadURL: variant.Attributes.BrochureURL,
+				}
+				catalogIDCounter++
+			}
+		}
+	}
+
+	// Set calculated values
+	detailedModel.PriceFrom = priceFrom
+	detailedModel.PriceTo = priceTo
+	detailedModel.MarketPriceFrom = priceFrom + 20000
+	detailedModel.MarketPriceTo = priceTo + 20000
+	detailedModel.MinDownPayment = minDownPayment
+	detailedModel.MinInstallments = minInstallments
+	detailedModel.Warranty = warranty
+
+	// Convert maps to slices
+	for _, showroom := range showroomMap {
+		detailedModel.Showrooms = append(detailedModel.Showrooms, *showroom)
+	}
+	for _, review := range reviewMap {
+		detailedModel.Reviews = append(detailedModel.Reviews, *review)
+	}
+	for _, catalog := range catalogMap {
+		detailedModel.Catalogs = append(detailedModel.Catalogs, *catalog)
+	}
+
+	return detailedModel, nil
 }

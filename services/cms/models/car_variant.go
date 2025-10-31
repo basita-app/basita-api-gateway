@@ -2,22 +2,29 @@ package models
 
 // CarVariant represents a car variant/trim in the system
 type CarVariant struct {
-	Name        string                         `json:"Name"`
-	CarModel    *RelationField[CarModel]       `json:"car_model,omitempty"`
-	Price       int                            `json:"Price"`
-	Year        int                            `json:"Year"`
-	Images      *MediaCollectionField          `json:"Images,omitempty"`
-	Specs       *SpecsComponent                `json:"Specs,omitempty"`
-	Features    []string                       `json:"Features,omitempty"`
-	BrochureURL string                         `json:"BrochureURL,omitempty"`
-	DisplayName string                         `json:"DisplayName,omitempty"`
-	ShowroomPricing []ShowroomPricingComponent `json:"ShowroomPricing,omitempty"`
+	Name            string                         `json:"Name"`
+	CarModel        *RelationField[CarModel]       `json:"car_model,omitempty"`
+	Price           int                            `json:"Price"`
+	Year            int                            `json:"Year"`
+	Images          *MediaCollectionField          `json:"Images,omitempty"`
+	Specs           *SpecsComponent                `json:"Specs,omitempty"`
+	Features        []string                       `json:"Features,omitempty"`
+	BrochureURL     string                         `json:"BrochureURL,omitempty"`
+	DisplayName     string                         `json:"DisplayName,omitempty"`
+	ShowroomPricing []ShowroomPricingComponent     `json:"ShowroomPricing,omitempty"`
+	ReviewLink      string                         `json:"ReviewLink,omitempty"`
+	Warranty        string                         `json:"Warranty,omitempty"`
+	MinDownPayment  int                            `json:"MinDownPayment,omitempty"`
+	MinInstallments int                            `json:"MinInstallments,omitempty"`
 }
 
 // ShowroomPricingComponent represents showroom pricing
 type ShowroomPricingComponent struct {
-	ID    int `json:"id,omitempty"`
-	Price int `json:"Price"`
+	ID              int                      `json:"id,omitempty"`
+	Price           int                      `json:"Price"`
+	MinDownPayment  int                      `json:"MinDownPayment,omitempty"`
+	MinInstallments int                      `json:"MinInstallments,omitempty"`
+	Showroom        *RelationField[Showroom] `json:"Showroom,omitempty"`
 }
 
 // SpecsComponent represents the specs embedded component

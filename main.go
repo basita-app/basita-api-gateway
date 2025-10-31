@@ -195,6 +195,21 @@ func main() {
 		return c.JSON(carModels)
 	})
 
+	// Get detailed car model by ID
+	cmsGroup.Get("/cars/:id", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		id := c.Params("id")
+
+		carModel, err := carModelService.GetDetailedByID(ctx, id, true)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Car model not found",
+			})
+		}
+
+		return c.JSON(carModel)
+	})
+
 	// Advertisements endpoints
 	cmsGroup.Get("/advertisements", func(c *fiber.Ctx) error {
 		ctx := c.Context()

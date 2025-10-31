@@ -53,7 +53,7 @@ func (s *AdvertisementService) GetAll(ctx context.Context, opts models.Collectio
 	simplifiedData := make(models.AdvertisementCollectionResponse, len(fullResponse.Data))
 	for i, item := range fullResponse.Data {
 		simplifiedData[i] = models.AdvertisementData{
-			ID:     item.ID,
+			ID:     item.DocumentID,
 			Action: item.Attributes.Action,
 			Banner: item.Attributes.Banner,
 		}
@@ -89,7 +89,7 @@ func (s *AdvertisementService) GetByID(ctx context.Context, id string, opts mode
 	var simplifiedData *models.AdvertisementData
 	if fullResponse.Data != nil {
 		simplifiedData = &models.AdvertisementData{
-			ID:     fullResponse.Data.ID,
+			ID:     fullResponse.Data.DocumentID,
 			Action: fullResponse.Data.Attributes.Action,
 			Banner: fullResponse.Data.Attributes.Banner,
 		}
