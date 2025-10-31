@@ -98,7 +98,7 @@ func main() {
 	// Initialize CMS services
 	brandService := cms.NewBrandService(cmsClient)
 	advertisementService := cms.NewAdvertisementService(cmsClient)
-	_ = cms.NewCarModelService(cmsClient)
+	carModelService := cms.NewCarModelService(cmsClient)
 	_ = cms.NewCarVariantService(cmsClient)
 	_ = cms.NewCityService(cmsClient)
 	_ = cms.NewGovernorateService(cmsClient)
@@ -172,6 +172,27 @@ func main() {
 		}
 
 		return c.JSON(brand)
+	})
+
+	// Get car models by brand ID
+	cmsGroup.Get("/brands/:id/cars", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		brandID := c.Params("id")
+
+		carModels, err := carModelService.GetByBrandID(ctx, brandID, true)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		// Set market prices (+20k offset from base prices)
+		for i := range carModels {
+			carModels[i].MarketPriceFrom = carModels[i].PriceFrom + 20000
+			carModels[i].MarketPriceTo = carModels[i].PriceTo + 20000
+		}
+
+		return c.JSON(carModels)
 	})
 
 	// Advertisements endpoints
