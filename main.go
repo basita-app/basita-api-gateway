@@ -130,13 +130,11 @@ func main() {
 		}
 
 		opts := models.CollectionOptions{
-			Page:     c.QueryInt("page", 1),
-			PageSize: c.QueryInt("pageSize", 25),
 			Populate: c.Query("populate", "*"),
 			Locale:   locale,
 		}
 
-		brands, err := brandService.GetAll(ctx, opts, true)
+		brands, err := brandService.GetSimplified(ctx, opts, true)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),

@@ -12,3 +12,10 @@ type BrandResponse = StrapiResponse[Brand]
 
 // BrandCollectionResponse is a convenience type for brand collection API responses
 type BrandCollectionResponse = StrapiCollectionResponse[Brand]
+
+// SimpleBrand is a simplified brand response with only id, title, and thumbnail
+type SimpleBrand struct {
+	ID        int         `json:"id"`
+	Title     string      `json:"title"`
+	Thumbnail *MediaField `json:"thumbnail,omitempty"`
+}
