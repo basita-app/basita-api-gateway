@@ -3,7 +3,6 @@ package main
 import (
 	"api-gateway/pkg/cache"
 	"api-gateway/services/cms"
-	"api-gateway/services/cms/models"
 	"context"
 	"log"
 	"os"
@@ -71,9 +70,14 @@ func main() {
 	// Initialize CMS client with Redis cache
 	cmsServiceURL := os.Getenv("CMS_SERVICE_URL")
 	if cmsServiceURL == "" {
-		cmsServiceURL = "http://localhost:1337/api"
+		cmsServiceURL = "http://localhost:1337/graphql"
 	}
 	cmsServiceToken := os.Getenv("CMS_SERVICE_TOKEN")
+
+	cmsMediaBaseURL := os.Getenv("CMS_MEDIA_BASE_URL")
+	if cmsMediaBaseURL == "" {
+		cmsMediaBaseURL = "http://localhost:1337"
+	}
 
 	// Debug: Check if token is loaded
 	if cmsServiceToken == "" {
@@ -89,24 +93,21 @@ func main() {
 
 	cmsClient := cms.NewCMSClient(cms.Config{
 		BaseURL:         cmsServiceURL,
+		MediaBaseURL:   cmsMediaBaseURL,
 		Token:           cmsServiceToken,
 		RequestTimeout:  10 * time.Second,
 		Cache:           cmsCache,
 		DefaultCacheTTL: 24 * time.Hour,
 	})
 
-	// Initialize CMS services
-	brandService := cms.NewBrandService(cmsClient)
-	advertisementService := cms.NewAdvertisementService(cmsClient)
-	carModelService := cms.NewCarModelService(cmsClient)
-	_ = cms.NewCarVariantService(cmsClient)
-	_ = cms.NewCityService(cmsClient)
-	_ = cms.NewGovernorateService(cmsClient)
-	_ = cms.NewShowroomService(cmsClient)
+	// Initialize CMS GraphQL services
+	brandService := cms.NewBrandServiceGraphQL(cmsClient)
+	advertisementService := cms.NewAdvertisementServiceGraphQL(cmsClient)
+	carModelService := cms.NewCarModelServiceGraphQL(cmsClient)
 
 	app.Get("/uploads/:path", func(c *fiber.Ctx) error {
 		path := c.Params("path")
-		cmsUrlWithoutAPI := strings.TrimSuffix(cmsServiceURL, "/api")
+		cmsUrlWithoutAPI := strings.TrimSuffix(cmsServiceURL, "/graphql")
 		println(cmsUrlWithoutAPI)
 		url := cmsUrlWithoutAPI + "/uploads/" + path
 		return proxy.Do(c, url)
@@ -118,23 +119,7 @@ func main() {
 	cmsGroup.Get("/brands", func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
-		// Extract locale from Accept-Language header
-		// Keep the full locale code (e.g., "ar-EG", "en")
-		locale := c.Get("Accept-Language")
-		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
-		if locale != "" {
-			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
-				locale = locale[:commaIdx]
-			}
-			locale = strings.TrimSpace(locale)
-		}
-
-		opts := models.CollectionOptions{
-			Populate: c.Query("populate", "*"),
-			Locale:   locale,
-		}
-
-		brands, err := brandService.GetSimplified(ctx, opts, true)
+		brands, err := brandService.GetSimplified(ctx)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
@@ -148,23 +133,7 @@ func main() {
 		ctx := c.Context()
 		id := c.Params("id")
 
-		// Extract locale from Accept-Language header
-		// Keep the full locale code (e.g., "ar-EG", "en")
-		locale := c.Get("Accept-Language")
-		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
-		if locale != "" {
-			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
-				locale = locale[:commaIdx]
-			}
-			locale = strings.TrimSpace(locale)
-		}
-
-		opts := models.ItemOptions{
-			Populate: c.Query("populate", "*"),
-			Locale:   locale,
-		}
-
-		brand, err := brandService.GetByID(ctx, id, opts, true)
+		brand, err := brandService.GetByID(ctx, id)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Brand not found",
@@ -179,17 +148,11 @@ func main() {
 		ctx := c.Context()
 		brandID := c.Params("id")
 
-		carModels, err := carModelService.GetByBrandID(ctx, brandID, true)
+		carModels, err := carModelService.GetByBrandID(ctx, brandID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
 			})
-		}
-
-		// Set market prices (+20k offset from base prices)
-		for i := range carModels {
-			carModels[i].MarketPriceFrom = carModels[i].PriceFrom + 20000
-			carModels[i].MarketPriceTo = carModels[i].PriceTo + 20000
 		}
 
 		return c.JSON(carModels)
@@ -200,7 +163,7 @@ func main() {
 		ctx := c.Context()
 		id := c.Params("id")
 
-		carModel, err := carModelService.GetDetailedByID(ctx, id, true)
+		carModel, err := carModelService.GetDetailedByID(ctx, id)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Car model not found",
@@ -214,25 +177,7 @@ func main() {
 	cmsGroup.Get("/advertisements", func(c *fiber.Ctx) error {
 		ctx := c.Context()
 
-		// Extract locale from Accept-Language header
-		// Keep the full locale code (e.g., "ar-EG", "en")
-		locale := c.Get("Accept-Language")
-		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
-		if locale != "" {
-			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
-				locale = locale[:commaIdx]
-			}
-			locale = strings.TrimSpace(locale)
-		}
-
-		opts := models.CollectionOptions{
-			Page:     c.QueryInt("page", 1),
-			PageSize: c.QueryInt("pageSize", 25),
-			Populate: c.Query("populate", "*"),
-			Locale:   locale,
-		}
-
-		advertisements, err := advertisementService.GetAll(ctx, opts, true)
+		advertisements, err := advertisementService.GetAll(ctx)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
@@ -246,23 +191,7 @@ func main() {
 		ctx := c.Context()
 		id := c.Params("id")
 
-		// Extract locale from Accept-Language header
-		// Keep the full locale code (e.g., "ar-EG", "en")
-		locale := c.Get("Accept-Language")
-		// If multiple locales are provided (e.g., "en-US,en;q=0.9"), take the first one
-		if locale != "" {
-			if commaIdx := strings.Index(locale, ","); commaIdx != -1 {
-				locale = locale[:commaIdx]
-			}
-			locale = strings.TrimSpace(locale)
-		}
-
-		opts := models.ItemOptions{
-			Populate: c.Query("populate", "*"),
-			Locale:   locale,
-		}
-
-		advertisement, err := advertisementService.GetByID(ctx, id, opts, true)
+		advertisement, err := advertisementService.GetByID(ctx, id)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Advertisement not found",
@@ -290,7 +219,7 @@ func main() {
 		// Get pattern from query or body
 		pattern := c.Query("pattern")
 		if pattern == "" {
-			pattern = "cms_*" // Default: clear all CMS cache
+			pattern = "cms:graphql:*" // Default: clear all CMS GraphQL cache
 		}
 
 		// Invalidate cache

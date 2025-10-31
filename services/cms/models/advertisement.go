@@ -1,11 +1,5 @@
 package models
 
-// Advertisement represents an advertisement banner in the CMS
-type Advertisement struct {
-	Action string      `json:"action"`
-	Banner *MediaField `json:"banner,omitempty"`
-}
-
 // AdvertisementData represents a simplified advertisement with only essential fields
 type AdvertisementData struct {
 	ID     string      `json:"id"`

@@ -4,130 +4,138 @@ import (
 	"api-gateway/services/cms/models"
 	"context"
 	"encoding/json"
-	"time"
+	"fmt"
 )
 
-// BrandService handles operations for the brands resource
-type BrandService struct {
-	client   Client
-	endpoint string
-	cacheTTL time.Duration
+// BrandServiceGraphQL handles operations for brands using GraphQL
+type BrandServiceGraphQL struct {
+	client *CMSClient
 }
 
-// NewBrandService creates a new service for brands
-func NewBrandService(client Client) *BrandService {
-	return &BrandService{
-		client:   client,
-		endpoint: "brands",
-		cacheTTL: 30 * time.Minute, // Brands don't change often
+// NewBrandServiceGraphQL creates a new GraphQL-based service for brands
+func NewBrandServiceGraphQL(client *CMSClient) *BrandServiceGraphQL {
+	return &BrandServiceGraphQL{
+		client: client,
 	}
 }
 
-// GetAll fetches all brands with optional filters
-func (s *BrandService) GetAll(ctx context.Context, opts models.CollectionOptions, useCache bool) (*models.BrandCollectionResponse, error) {
-	var cacheOpts *models.CacheOptions
-	if useCache {
-		cacheOpts = &models.CacheOptions{
-			Enabled: true,
-			TTL:     s.cacheTTL,
-		}
+// parseMediaField converts Strapi media field to our MediaField model with URL prefixing
+func (s *BrandServiceGraphQL) parseMediaField(media *strapiMediaField) *models.MediaField {
+	if media == nil {
+		return nil
 	}
 
-	data, err := s.client.GetCollection(ctx, s.endpoint, opts, cacheOpts)
-	if err != nil {
-		return nil, err
+	field := &models.MediaField{
+		ID:     media.DocumentID,
+		Width:  media.Width,
+		Height: media.Height,
+		URL:    s.client.PrefixMediaURL(media.URL),
 	}
 
-	var response models.BrandCollectionResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, &models.RequestError{
-			Message: "failed to unmarshal brands: " + err.Error(),
-		}
-	}
+	// Parse formats if available
+	if media.Formats != nil {
+		formats := &models.MediaFormats{}
 
-	return &response, nil
-}
-
-// GetByID fetches a single brand by ID
-func (s *BrandService) GetByID(ctx context.Context, id string, opts models.ItemOptions, useCache bool) (*models.BrandResponse, error) {
-	var cacheOpts *models.CacheOptions
-	if useCache {
-		cacheOpts = &models.CacheOptions{
-			Enabled: true,
-			TTL:     s.cacheTTL,
-		}
-	}
-
-	data, err := s.client.GetItem(ctx, s.endpoint, id, opts, cacheOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	var response models.BrandResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, &models.RequestError{
-			Message: "failed to unmarshal brand: " + err.Error(),
-		}
-	}
-
-	return &response, nil
-}
-
-// GetSimplified fetches all brands and returns a simplified response
-func (s *BrandService) GetSimplified(ctx context.Context, opts models.CollectionOptions, useCache bool) ([]models.SimpleBrand, error) {
-	// Fetch all brands with a large page size to get everything at once
-	opts.PageSize = 1000
-	opts.Page = 1
-	
-	var cacheOpts *models.CacheOptions
-	if useCache {
-		cacheOpts = &models.CacheOptions{
-			Enabled: true,
-			TTL:     s.cacheTTL,
-		}
-	}
-
-	data, err := s.client.GetCollection(ctx, s.endpoint, opts, cacheOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	var response models.BrandCollectionResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, &models.RequestError{
-			Message: "failed to unmarshal brands: " + err.Error(),
-		}
-	}
-
-	// Transform to simplified response
-	simplifiedBrands := make([]models.SimpleBrand, len(response.Data))
-	for i, brandData := range response.Data {
-		var thumbnail *models.MediaField
-		if brandData.Attributes.Logo != nil && brandData.Attributes.Logo.Formats != nil && brandData.Attributes.Logo.Formats.Thumbnail != nil {
-			// Convert MediaFormat to MediaField
-			mediaFormat := brandData.Attributes.Logo.Formats.Thumbnail
-			thumbnail = &models.MediaField{
-				Name:   mediaFormat.Name,
-				Hash:   mediaFormat.Hash,
-				Ext:    mediaFormat.Ext,
-				Mime:   mediaFormat.Mime,
-				Width:  mediaFormat.Width,
-				Height: mediaFormat.Height,
-				Size:   mediaFormat.Size,
-				URL:    mediaFormat.URL,
+		// Helper to parse individual format
+		parseFormat := func(formatData interface{}) *models.MediaFormat {
+			if formatData == nil {
+				return nil
+			}
+			formatMap, ok := formatData.(map[string]interface{})
+			if !ok {
+				return nil
+			}
+			url, _ := formatMap["url"].(string)
+			width, _ := formatMap["width"].(float64)
+			height, _ := formatMap["height"].(float64)
+			return &models.MediaFormat{
+				Width:  int(width),
+				Height: int(height),
+				URL:    s.client.PrefixMediaURL(url),
 			}
 		}
-		simplifiedBrands[i] = models.SimpleBrand{
-			ID:        brandData.DocumentID,
-			Title:     brandData.Attributes.Name,
-			Thumbnail: thumbnail,
+
+		if thumbnail, ok := media.Formats["thumbnail"]; ok {
+			formats.Thumbnail = parseFormat(thumbnail)
+		}
+		if small, ok := media.Formats["small"]; ok {
+			formats.Small = parseFormat(small)
+		}
+		if medium, ok := media.Formats["medium"]; ok {
+			formats.Medium = parseFormat(medium)
+		}
+		if large, ok := media.Formats["large"]; ok {
+			formats.Large = parseFormat(large)
+		}
+
+		field.Formats = formats
+	}
+
+	return field
+}
+
+// GetSimplified fetches all brands with simplified response
+func (s *BrandServiceGraphQL) GetSimplified(ctx context.Context) ([]models.SimpleBrand, error) {
+	data, err := s.client.ExecuteGraphQL(ctx, GetBrandsQuery, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch brands: %w", err)
+	}
+
+	var result struct {
+		Brands []struct {
+			DocumentID string            `json:"documentId"`
+			Name       string            `json:"Name"`
+			Logo       *strapiMediaField `json:"Logo"`
+		} `json:"brands"`
+	}
+
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal brands: %w", err)
+	}
+
+	brands := make([]models.SimpleBrand, len(result.Brands))
+	for i, brand := range result.Brands {
+		brands[i] = models.SimpleBrand{
+			ID:        brand.DocumentID,
+			Title:     brand.Name,
+			Thumbnail: s.parseMediaField(brand.Logo),
 		}
 	}
 
-	return simplifiedBrands, nil
+	return brands, nil
 }
 
-// InvalidateCache invalidates all cached brands
-func (s *BrandService) InvalidateCache(ctx context.Context) error {
-	return s.client.InvalidateCache(ctx, s.endpoint+"*")
+// GetByID fetches a single brand by documentId
+func (s *BrandServiceGraphQL) GetByID(ctx context.Context, documentId string) (*models.SimpleBrand, error) {
+	variables := map[string]interface{}{
+		"documentId": documentId,
+	}
+
+	data, err := s.client.ExecuteGraphQL(ctx, GetBrandByIDQuery, variables)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch brand: %w", err)
+	}
+
+	var result struct {
+		Brand *struct {
+			DocumentID string            `json:"documentId"`
+			Name       string            `json:"Name"`
+			Slug       string            `json:"Slug"`
+			Logo       *strapiMediaField `json:"Logo"`
+		} `json:"brand"`
+	}
+
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal brand: %w", err)
+	}
+
+	if result.Brand == nil {
+		return nil, fmt.Errorf("brand not found")
+	}
+
+	return &models.SimpleBrand{
+		ID:        result.Brand.DocumentID,
+		Title:     result.Brand.Name,
+		Thumbnail: s.parseMediaField(result.Brand.Logo),
+	}, nil
 }

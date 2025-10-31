@@ -2,37 +2,31 @@ package cms
 
 import (
 	"api-gateway/pkg/cache"
-	"api-gateway/services/cms/models"
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
 
-// Client is the interface for CMS operations
-type Client interface {
-	GetCollection(ctx context.Context, endpoint string, opts models.CollectionOptions, cacheOpts *models.CacheOptions) ([]byte, error)
-	GetItem(ctx context.Context, endpoint string, id string, opts models.ItemOptions, cacheOpts *models.CacheOptions) ([]byte, error)
-	GetSingle(ctx context.Context, endpoint string, opts models.ItemOptions, cacheOpts *models.CacheOptions) ([]byte, error)
-	InvalidateCache(ctx context.Context, pattern string) error
-}
-
-// CMSClient is the main client for interacting with Strapi CMS
+// CMSClient is the main client for interacting with Strapi CMS via GraphQL
 type CMSClient struct {
-	baseURL    string
-	token      string
-	httpClient *http.Client
-	cache      cache.Cache
-	defaultTTL time.Duration
+	baseURL      string
+	mediaBaseURL string // Base URL for media files (without /api)
+	token        string
+	httpClient   *http.Client
+	cache        cache.Cache
+	defaultTTL   time.Duration
 }
 
 // Config holds configuration for the CMS client
 type Config struct {
 	BaseURL         string
+	MediaBaseURL    string // Optional: base URL for media (if different from BaseURL)
 	Token           string
 	RequestTimeout  time.Duration
 	Cache           cache.Cache
@@ -51,12 +45,16 @@ func NewCMSClient(config Config) *CMSClient {
 		config.Cache = &cache.NoOpCache{}
 	}
 
-	// Ensure baseURL ends with /
-	baseURL := strings.TrimRight(config.BaseURL, "/") + "/"
+	// If MediaBaseURL is not provided, derive it from BaseURL by removing /api suffix
+	mediaBaseURL := config.MediaBaseURL
+	if mediaBaseURL == "" {
+		mediaBaseURL = strings.TrimSuffix(config.BaseURL, "/graphql")
+	}
 
 	return &CMSClient{
-		baseURL: baseURL,
-		token:   config.Token,
+		baseURL:      config.BaseURL,
+		mediaBaseURL: mediaBaseURL,
+		token:        config.Token,
 		httpClient: &http.Client{
 			Timeout: config.RequestTimeout,
 			Transport: &http.Transport{
@@ -70,127 +68,54 @@ func NewCMSClient(config Config) *CMSClient {
 	}
 }
 
-// GetCollection fetches a collection from Strapi with caching support
-func (c *CMSClient) GetCollection(ctx context.Context, endpoint string, opts models.CollectionOptions, cacheOpts *models.CacheOptions) ([]byte, error) {
-	// Build cache key
-	cacheKey := NewCacheKeyBuilder(endpoint).
-		AddOptions(opts).
-		Build()
-
-	// Check cache if enabled
-	if cacheOpts != nil && cacheOpts.Enabled {
-		if cached, err := c.cache.Get(ctx, cacheKey); err == nil && cached != nil {
-			return cached, nil
-		}
-	}
-
-	// Build request URL
-	reqURL := c.buildCollectionURL(endpoint, opts)
-
-	// Make request
-	data, err := c.doRequest(ctx, "GET", reqURL)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cache response if enabled
-	if cacheOpts != nil && cacheOpts.Enabled {
-		ttl := c.defaultTTL
-		if cacheOpts.TTL > 0 {
-			ttl = cacheOpts.TTL
-		}
-		// We don't return error if caching fails, just log it
-		_ = c.cache.Set(ctx, cacheKey, data, ttl)
-	}
-
-	return data, nil
-}
-
-// GetItem fetches a single item by ID from Strapi with caching support
-func (c *CMSClient) GetItem(ctx context.Context, endpoint string, id string, opts models.ItemOptions, cacheOpts *models.CacheOptions) ([]byte, error) {
-	// Build cache key
-	cacheKey := NewCacheKeyBuilder(endpoint).
-		AddPart(id).
-		AddPart(fmt.Sprintf("populate:%s", opts.Populate)).
-		AddPart(fmt.Sprintf("locale:%s", opts.Locale)).
-		Build()
-
-	// Check cache if enabled
-	if cacheOpts != nil && cacheOpts.Enabled {
-		if cached, err := c.cache.Get(ctx, cacheKey); err == nil && cached != nil {
-			return cached, nil
-		}
-	}
-
-	// Build request URL
-	reqURL := c.buildItemURL(endpoint, id, opts)
-
-	// Make request
-	data, err := c.doRequest(ctx, "GET", reqURL)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cache response if enabled
-	if cacheOpts != nil && cacheOpts.Enabled {
-		ttl := c.defaultTTL
-		if cacheOpts.TTL > 0 {
-			ttl = cacheOpts.TTL
-		}
-		_ = c.cache.Set(ctx, cacheKey, data, ttl)
-	}
-
-	return data, nil
-}
-
-// GetSingle fetches a single-type resource from Strapi with caching support
-func (c *CMSClient) GetSingle(ctx context.Context, endpoint string, opts models.ItemOptions, cacheOpts *models.CacheOptions) ([]byte, error) {
-	// Build cache key
-	cacheKey := NewCacheKeyBuilder(endpoint).
-		AddPart(fmt.Sprintf("populate:%s", opts.Populate)).
-		AddPart(fmt.Sprintf("locale:%s", opts.Locale)).
-		Build()
-
-	// Check cache if enabled
-	if cacheOpts != nil && cacheOpts.Enabled {
-		if cached, err := c.cache.Get(ctx, cacheKey); err == nil && cached != nil {
-			return cached, nil
-		}
-	}
-
-	// Build request URL
-	reqURL := c.buildSingleURL(endpoint, opts)
-
-	// Make request
-	data, err := c.doRequest(ctx, "GET", reqURL)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cache response if enabled
-	if cacheOpts != nil && cacheOpts.Enabled {
-		ttl := c.defaultTTL
-		if cacheOpts.TTL > 0 {
-			ttl = cacheOpts.TTL
-		}
-		_ = c.cache.Set(ctx, cacheKey, data, ttl)
-	}
-
-	return data, nil
-}
-
 // InvalidateCache invalidates cache entries matching the given pattern
 func (c *CMSClient) InvalidateCache(ctx context.Context, pattern string) error {
 	return c.cache.DeletePattern(ctx, pattern)
 }
 
-// doRequest performs an HTTP request with proper headers and error handling
-func (c *CMSClient) doRequest(ctx context.Context, method, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+// GraphQLRequest represents a GraphQL query request
+type GraphQLRequest struct {
+	Query     string                 `json:"query"`
+	Variables map[string]interface{} `json:"variables,omitempty"`
+}
+
+// GraphQLResponse represents a GraphQL response
+type GraphQLResponse struct {
+	Data   json.RawMessage `json:"data"`
+	Errors []GraphQLError  `json:"errors,omitempty"`
+}
+
+// GraphQLError represents a GraphQL error
+type GraphQLError struct {
+	Message string        `json:"message"`
+	Path    []interface{} `json:"path,omitempty"`
+}
+
+// ExecuteGraphQL executes a GraphQL query with caching support
+func (c *CMSClient) ExecuteGraphQL(ctx context.Context, query string, variables map[string]interface{}) (json.RawMessage, error) {
+	// Build cache key from query and variables
+	cacheKey := c.buildCacheKey(query, variables)
+
+	// Check cache first
+	if cached, err := c.cache.Get(ctx, cacheKey); err == nil && cached != nil {
+		fmt.Printf("[GraphQL Client] Cache hit for key: %s\n", cacheKey)
+		return cached, nil
+	}
+	// Create request body
+	reqBody := GraphQLRequest{
+		Query:     query,
+		Variables: variables,
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, &models.RequestError{
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
+		return nil, fmt.Errorf("failed to marshal GraphQL request: %w", err)
+	}
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GraphQL request: %w", err)
 	}
 
 	// Set headers
@@ -200,126 +125,88 @@ func (c *CMSClient) doRequest(ctx context.Context, method, url string) ([]byte, 
 	}
 
 	// Debug logging
-	fmt.Printf("[CMS Client] %s %s\n", method, url)
+	fmt.Printf("[GraphQL Client] POST %s\n", c.baseURL)
+	fmt.Printf("[GraphQL Client] Query: %s\n", query)
+	if variables != nil {
+		varsJSON, _ := json.Marshal(variables)
+		fmt.Printf("[GraphQL Client] Variables: %s\n", string(varsJSON))
+	}
 
 	// Execute request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, &models.RequestError{
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
+		return nil, fmt.Errorf("GraphQL request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, &models.RequestError{
-			StatusCode: resp.StatusCode,
-			Message:    fmt.Sprintf("failed to read response body: %v", err),
-		}
+		return nil, fmt.Errorf("failed to read GraphQL response: %w", err)
 	}
 
 	// Debug logging
-	fmt.Printf("[CMS Client] Response Status: %d\n", resp.StatusCode)
-	fmt.Printf("[CMS Client] Response Body (first 500 chars): %s\n", string(body[:min(500, len(body))]))
-	if resp.StatusCode >= 400 {
-		fmt.Printf("[CMS Client] Error Body: %s\n", string(body))
+	fmt.Printf("[GraphQL Client] Response Status: %d\n", resp.StatusCode)
+	fmt.Printf("[GraphQL Client] Response Body: %s\n", string(body))
+
+	// Parse GraphQL response
+	var graphqlResp GraphQLResponse
+	if err := json.Unmarshal(body, &graphqlResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal GraphQL response: %w", err)
 	}
 
-	// Check for errors
-	if resp.StatusCode >= 400 {
-		var strapiErr models.StrapiError
-		if err := json.Unmarshal(body, &strapiErr); err == nil && strapiErr.Error.Message != "" {
-			return nil, &models.RequestError{
-				StatusCode: resp.StatusCode,
-				StrapiErr:  &strapiErr,
-			}
-		}
-		return nil, &models.RequestError{
-			StatusCode: resp.StatusCode,
-			Message:    fmt.Sprintf("request failed with status %d: %s", resp.StatusCode, string(body)),
-		}
+	// Check for GraphQL errors
+	if len(graphqlResp.Errors) > 0 {
+		return nil, fmt.Errorf("GraphQL errors: %v", graphqlResp.Errors)
 	}
 
-	return body, nil
+	// Cache successful response
+	if graphqlResp.Data != nil {
+		_ = c.cache.Set(ctx, cacheKey, graphqlResp.Data, c.defaultTTL)
+		fmt.Printf("[GraphQL Client] Cached response with key: %s\n", cacheKey)
+	}
+
+	return graphqlResp.Data, nil
 }
 
-// buildCollectionURL constructs the URL for collection requests
-func (c *CMSClient) buildCollectionURL(endpoint string, opts models.CollectionOptions) string {
-	u, _ := url.Parse(c.baseURL + strings.TrimPrefix(endpoint, "/"))
-	query := u.Query()
+// buildCacheKey generates a cache key from the query and variables
+func (c *CMSClient) buildCacheKey(query string, variables map[string]interface{}) string {
+	// Create a deterministic string representation
+	var keyParts []string
+	keyParts = append(keyParts, query)
 
-	if opts.Page > 0 {
-		query.Set("pagination[page]", fmt.Sprintf("%d", opts.Page))
-	}
-	if opts.PageSize > 0 {
-		query.Set("pagination[pageSize]", fmt.Sprintf("%d", opts.PageSize))
-	}
-	if opts.Populate != "" {
-		query.Set("populate", opts.Populate)
-	}
-	if opts.Locale != "" {
-		query.Set("locale", opts.Locale)
+	if variables != nil {
+		// Marshal variables to JSON for consistent key generation
+		varsJSON, _ := json.Marshal(variables)
+		keyParts = append(keyParts, string(varsJSON))
 	}
 
-	// Add filters
-	for key, value := range opts.Filters {
-		query.Set(key, value)
-	}
-
-	// Add sort
-	for _, sort := range opts.Sort {
-		query.Add("sort", sort)
-	}
-
-	// Add fields
-	for _, field := range opts.Fields {
-		query.Add("fields", field)
-	}
-
-	u.RawQuery = query.Encode()
-	return u.String()
+	// Combine and hash to create a shorter key
+	combined := strings.Join(keyParts, "|")
+	hash := sha256.Sum256([]byte(combined))
+	return fmt.Sprintf("cms:graphql:%x", hash)
 }
 
-// buildItemURL constructs the URL for single item requests
-func (c *CMSClient) buildItemURL(endpoint, id string, opts models.ItemOptions) string {
-	u, _ := url.Parse(c.baseURL + strings.TrimPrefix(endpoint, "/") + "/" + id)
-	query := u.Query()
-
-	if opts.Populate != "" {
-		query.Set("populate", opts.Populate)
+// PrefixMediaURL adds the media base URL prefix to a relative URL
+// Returns empty string if url is empty, returns as-is if already absolute
+func (c *CMSClient) PrefixMediaURL(url string) string {
+	if url == "" {
+		return ""
 	}
-	if opts.Locale != "" {
-		query.Set("locale", opts.Locale)
+	// If URL is already absolute, return as-is
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return url
 	}
-
-	// Add fields
-	for _, field := range opts.Fields {
-		query.Add("fields", field)
-	}
-
-	u.RawQuery = query.Encode()
-	return u.String()
+	// Add prefix to relative URL
+	return c.mediaBaseURL + url
 }
 
-// buildSingleURL constructs the URL for single-type requests
-func (c *CMSClient) buildSingleURL(endpoint string, opts models.ItemOptions) string {
-	u, _ := url.Parse(c.baseURL + strings.TrimPrefix(endpoint, "/"))
-	query := u.Query()
-
-	if opts.Populate != "" {
-		query.Set("populate", opts.Populate)
-	}
-	if opts.Locale != "" {
-		query.Set("locale", opts.Locale)
-	}
-
-	// Add fields
-	for _, field := range opts.Fields {
-		query.Add("fields", field)
-	}
-
-	u.RawQuery = query.Encode()
-	return u.String()
+// strapiMediaField represents the raw media field structure from Strapi GraphQL
+// This is used internally by services to parse media fields from GraphQL responses
+type strapiMediaField struct {
+	DocumentID string                 `json:"documentId"`
+	URL        string                 `json:"url"`
+	Width      int                    `json:"width"`
+	Height     int                    `json:"height"`
+	Formats    map[string]interface{} `json:"formats"`
 }

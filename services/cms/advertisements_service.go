@@ -4,103 +4,139 @@ import (
 	"api-gateway/services/cms/models"
 	"context"
 	"encoding/json"
-	"time"
+	"fmt"
 )
 
-// AdvertisementService handles operations for the advertisements resource
-type AdvertisementService struct {
-	client   Client
-	endpoint string
-	cacheTTL time.Duration
+// AdvertisementServiceGraphQL handles operations for advertisements using GraphQL
+type AdvertisementServiceGraphQL struct {
+	client *CMSClient
 }
 
-// NewAdvertisementService creates a new service for advertisements
-func NewAdvertisementService(client Client) *AdvertisementService {
-	return &AdvertisementService{
-		client:   client,
-		endpoint: "advertisements",
-		cacheTTL: 15 * time.Minute, // Shorter cache for ads that may change frequently
+// NewAdvertisementServiceGraphQL creates a new GraphQL-based service for advertisements
+func NewAdvertisementServiceGraphQL(client *CMSClient) *AdvertisementServiceGraphQL {
+	return &AdvertisementServiceGraphQL{
+		client: client,
 	}
 }
 
-// GetAll fetches all advertisements without pagination
-func (s *AdvertisementService) GetAll(ctx context.Context, opts models.CollectionOptions, useCache bool) (models.AdvertisementCollectionResponse, error) {
-	var cacheOpts *models.CacheOptions
-	if useCache {
-		cacheOpts = &models.CacheOptions{
-			Enabled: true,
-			TTL:     s.cacheTTL,
+// parseMediaField converts Strapi media field to our MediaField model with URL prefixing
+func (s *AdvertisementServiceGraphQL) parseMediaField(media *strapiMediaField) *models.MediaField {
+	if media == nil {
+		return nil
+	}
+
+	field := &models.MediaField{
+		ID:     media.DocumentID,
+		Width:  media.Width,
+		Height: media.Height,
+		URL:    s.client.PrefixMediaURL(media.URL),
+	}
+
+	// Parse formats if available
+	if media.Formats != nil {
+		formats := &models.MediaFormats{}
+
+		// Helper to parse individual format
+		parseFormat := func(formatData interface{}) *models.MediaFormat {
+			if formatData == nil {
+				return nil
+			}
+			formatMap, ok := formatData.(map[string]interface{})
+			if !ok {
+				return nil
+			}
+			url, _ := formatMap["url"].(string)
+			width, _ := formatMap["width"].(float64)
+			height, _ := formatMap["height"].(float64)
+			return &models.MediaFormat{
+				Width:  int(width),
+				Height: int(height),
+				URL:    s.client.PrefixMediaURL(url),
+			}
 		}
+
+		if thumbnail, ok := media.Formats["thumbnail"]; ok {
+			formats.Thumbnail = parseFormat(thumbnail)
+		}
+		if small, ok := media.Formats["small"]; ok {
+			formats.Small = parseFormat(small)
+		}
+		if medium, ok := media.Formats["medium"]; ok {
+			formats.Medium = parseFormat(medium)
+		}
+		if large, ok := media.Formats["large"]; ok {
+			formats.Large = parseFormat(large)
+		}
+
+		field.Formats = formats
 	}
 
-	// Override pagination to fetch all advertisements at once
-	opts.PageSize = 1000 // Set a high limit to get all advertisements
+	return field
+}
 
-	data, err := s.client.GetCollection(ctx, s.endpoint, opts, cacheOpts)
+// GetAll fetches all advertisements
+func (s *AdvertisementServiceGraphQL) GetAll(ctx context.Context) (models.AdvertisementCollectionResponse, error) {
+	data, err := s.client.ExecuteGraphQL(ctx, GetAdvertisementsQuery, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch advertisements: %w", err)
 	}
 
-	// Unmarshal into full Strapi response
-	var fullResponse models.StrapiCollectionResponse[models.Advertisement]
-	if err := json.Unmarshal(data, &fullResponse); err != nil {
-		return nil, &models.RequestError{
-			Message: "failed to unmarshal advertisements: " + err.Error(),
+	var result struct {
+		Advertisements []struct {
+			DocumentID string            `json:"documentId"`
+			Action     string            `json:"Action"`
+			Banner     *strapiMediaField `json:"Banner"`
+		} `json:"advertisements"`
+	}
+
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal advertisements: %w", err)
+	}
+
+	ads := make(models.AdvertisementCollectionResponse, len(result.Advertisements))
+	for i, ad := range result.Advertisements {
+		ads[i] = models.AdvertisementData{
+			ID:     ad.DocumentID,
+			Action: ad.Action,
+			Banner: s.parseMediaField(ad.Banner),
 		}
 	}
 
-	// Transform to simplified response with only id, action, and banner (no pagination)
-	simplifiedData := make(models.AdvertisementCollectionResponse, len(fullResponse.Data))
-	for i, item := range fullResponse.Data {
-		simplifiedData[i] = models.AdvertisementData{
-			ID:     item.DocumentID,
-			Action: item.Attributes.Action,
-			Banner: item.Attributes.Banner,
-		}
-	}
-
-	return simplifiedData, nil
+	return ads, nil
 }
 
-// GetByID fetches a single advertisement by ID
-func (s *AdvertisementService) GetByID(ctx context.Context, id string, opts models.ItemOptions, useCache bool) (*models.AdvertisementResponse, error) {
-	var cacheOpts *models.CacheOptions
-	if useCache {
-		cacheOpts = &models.CacheOptions{
-			Enabled: true,
-			TTL:     s.cacheTTL,
-		}
+// GetByID fetches a single advertisement by documentId
+func (s *AdvertisementServiceGraphQL) GetByID(ctx context.Context, documentId string) (*models.AdvertisementResponse, error) {
+	variables := map[string]interface{}{
+		"documentId": documentId,
 	}
 
-	data, err := s.client.GetItem(ctx, s.endpoint, id, opts, cacheOpts)
+	data, err := s.client.ExecuteGraphQL(ctx, GetAdvertisementByIDQuery, variables)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch advertisement: %w", err)
 	}
 
-	// Unmarshal into full Strapi response
-	var fullResponse models.StrapiResponse[models.Advertisement]
-	if err := json.Unmarshal(data, &fullResponse); err != nil {
-		return nil, &models.RequestError{
-			Message: "failed to unmarshal advertisement: " + err.Error(),
-		}
+	var result struct {
+		Advertisement *struct {
+			DocumentID string            `json:"documentId"`
+			Action     string            `json:"Action"`
+			Banner     *strapiMediaField `json:"Banner"`
+		} `json:"advertisement"`
 	}
 
-	// Transform to simplified response with only id, action, and banner
-	var simplifiedData *models.AdvertisementData
-	if fullResponse.Data != nil {
-		simplifiedData = &models.AdvertisementData{
-			ID:     fullResponse.Data.DocumentID,
-			Action: fullResponse.Data.Attributes.Action,
-			Banner: fullResponse.Data.Attributes.Banner,
-		}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal advertisement: %w", err)
+	}
+
+	if result.Advertisement == nil {
+		return nil, fmt.Errorf("advertisement not found")
 	}
 
 	return &models.AdvertisementResponse{
-		Data: simplifiedData,
+		Data: &models.AdvertisementData{
+			ID:     result.Advertisement.DocumentID,
+			Action: result.Advertisement.Action,
+			Banner: s.parseMediaField(result.Advertisement.Banner),
+		},
 	}, nil
-}
-
-// InvalidateCache invalidates all cached advertisements
-func (s *AdvertisementService) InvalidateCache(ctx context.Context) error {
-	return s.client.InvalidateCache(ctx, s.endpoint+"*")
 }
