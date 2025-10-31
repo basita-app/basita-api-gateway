@@ -146,20 +146,23 @@ func (s *CarModelService) GetByBrandID(ctx context.Context, brandID string, useC
 			}
 		}
 
-		// Extract thumbnail image if available
+		// Extract thumbnail image from the first image if available
 		var thumbnail *models.MediaField
-		if modelData.Attributes.Image != nil && modelData.Attributes.Image.Formats != nil && modelData.Attributes.Image.Formats.Thumbnail != nil {
-			// Convert MediaFormat to MediaField
-			mediaFormat := modelData.Attributes.Image.Formats.Thumbnail
-			thumbnail = &models.MediaField{
-				Name:   mediaFormat.Name,
-				Hash:   mediaFormat.Hash,
-				Ext:    mediaFormat.Ext,
-				Mime:   mediaFormat.Mime,
-				Width:  mediaFormat.Width,
-				Height: mediaFormat.Height,
-				Size:   mediaFormat.Size,
-				URL:    mediaFormat.URL,
+		if modelData.Attributes.Images != nil && len(*modelData.Attributes.Images) > 0 {
+			firstImage := (*modelData.Attributes.Images)[0]
+			if firstImage.Formats != nil && firstImage.Formats.Thumbnail != nil {
+				// Convert MediaFormat to MediaField
+				mediaFormat := firstImage.Formats.Thumbnail
+				thumbnail = &models.MediaField{
+					Name:   mediaFormat.Name,
+					Hash:   mediaFormat.Hash,
+					Ext:    mediaFormat.Ext,
+					Mime:   mediaFormat.Mime,
+					Width:  mediaFormat.Width,
+					Height: mediaFormat.Height,
+					Size:   mediaFormat.Size,
+					URL:    mediaFormat.URL,
+				}
 			}
 		}
 

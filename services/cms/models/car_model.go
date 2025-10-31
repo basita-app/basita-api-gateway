@@ -7,7 +7,7 @@ type CarModel struct {
 	FuelType string                     `json:"FuelType,omitempty"` // Electric, Hybrid, x80, x90, x92, x95
 	Slug     string                     `json:"Slug"`
 	Brand    *RelationField[Brand]      `json:"brand,omitempty"`
-	Image    *MediaField                `json:"Image,omitempty"`
+	Images   *MediaCollectionField      `json:"Images,omitempty"`
 }
 
 // CarModelResponse is a convenience type for car model API responses
