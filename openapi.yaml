@@ -23,6 +23,8 @@ tags:
     description: Health check endpoint
   - name: Initialization
     description: Application initialization endpoint
+  - name: Authentication
+    description: User authentication and authorization endpoints (proxied to auth service)
   - name: Advertisements
     description: Advertisement management endpoints
   - name: Brands
@@ -96,6 +98,319 @@ paths:
                       width: 1342
                       height: 1100
                       url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/sign-up/email:
+    post:
+      tags:
+        - Authentication
+      summary: Sign up with email and password
+      description: Register a new user account using email and password
+      operationId: signUpEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "SecurePass123!"
+                name:
+                  type: string
+                  example: "John Doe"
+      responses:
+        '200':
+          description: Successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/sign-in/email:
+    post:
+      tags:
+        - Authentication
+      summary: Sign in with email and password
+      description: Authenticate user with email and password
+      operationId: signInEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123!"
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/sign-out:
+    post:
+      tags:
+        - Authentication
+      summary: Sign out
+      description: Sign out the current user and invalidate the session
+      operationId: signOut
+      responses:
+        '200':
+          description: Successfully signed out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/auth/forget-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: Send password reset email to the user
+      operationId: forgetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password
+      description: Reset user password with token from email
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - newPassword
+              properties:
+                token:
+                  type: string
+                  example: "reset_token_here"
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password successfully reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/sign-in/google:
+    get:
+      tags:
+        - Authentication
+      summary: Sign in with Google
+      description: Initiates Google OAuth sign-in flow
+      operationId: signInGoogle
+      responses:
+        '302':
+          description: Redirects to Google OAuth consent page
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/callback/google:
+    get:
+      tags:
+        - Authentication
+      summary: Google OAuth callback
+      description: Handles the callback from Google OAuth
+      operationId: googleCallback
+      parameters:
+        - name: code
+          in: query
+          description: Authorization code from Google
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: State parameter for CSRF protection
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects to application with session
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/sign-in/apple:
+    get:
+      tags:
+        - Authentication
+      summary: Sign in with Apple
+      description: Initiates Apple OAuth sign-in flow
+      operationId: signInApple
+      responses:
+        '302':
+          description: Redirects to Apple OAuth consent page
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/callback/apple:
+    post:
+      tags:
+        - Authentication
+      summary: Apple OAuth callback
+      description: Handles the callback from Apple OAuth
+      operationId: appleCallback
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Authorization code from Apple
+                state:
+                  type: string
+                  description: State parameter for CSRF protection
+                user:
+                  type: string
+                  description: User information from Apple (first sign-in only)
+      responses:
+        '302':
+          description: Redirects to application with session
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/get-session:
+    get:
+      tags:
+        - Authentication
+      summary: Get current session
+      description: Retrieves the current user session information
+      operationId: getSession
+      responses:
+        '200':
+          description: Current session information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1428,6 +1743,95 @@ components:
           description: Feature list (simple string array converted to objects)
           items:
             $ref: '#/components/schemas/FeatureItem'
+
+    User:
+      type: object
+      description: User account information
+      required:
+        - id
+        - email
+        - emailVerified
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: User unique identifier
+          example: "clx1y2z3a0000abcdefgh1234"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "user@example.com"
+        name:
+          type: string
+          description: User display name
+          example: "John Doe"
+          nullable: true
+        emailVerified:
+          type: boolean
+          description: Whether the email has been verified
+          example: false
+        image:
+          type: string
+          format: uri
+          description: User profile image URL
+          example: "https://lh3.googleusercontent.com/a/..."
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-15T10:30:00Z"
+
+    SessionInfo:
+      type: object
+      description: Session information
+      required:
+        - token
+        - userId
+        - expiresAt
+      properties:
+        token:
+          type: string
+          description: Session token
+          example: "session_abc123xyz..."
+        userId:
+          type: string
+          description: User ID associated with this session
+          example: "clx1y2z3a0000abcdefgh1234"
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration timestamp
+          example: "2024-02-15T10:30:00Z"
+        ipAddress:
+          type: string
+          description: IP address of the session
+          example: "192.168.1.1"
+          nullable: true
+        userAgent:
+          type: string
+          description: User agent string
+          example: "Mozilla/5.0..."
+          nullable: true
+
+    Session:
+      type: object
+      description: Complete session response with user information
+      required:
+        - user
+        - session
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/SessionInfo'
 
     Error:
       type: object
