@@ -110,3 +110,113 @@ func (s *ShowroomServiceGraphQL) GetAll(ctx context.Context) ([]models.Showroom,
 
 	return showrooms, nil
 }
+
+// GetByID fetches a single showroom by documentId with full details
+func (s *ShowroomServiceGraphQL) GetByID(ctx context.Context, documentId string) (*models.DetailedShowroom, error) {
+	variables := map[string]interface{}{
+		"documentId": documentId,
+	}
+
+	data, err := s.client.ExecuteGraphQL(ctx, GetShowroomByIDQuery, variables)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch showroom: %w", err)
+	}
+
+	var result struct {
+		Showroom *struct {
+			DocumentID     string            `json:"documentId"`
+			Name           string            `json:"Name"`
+			Description    string            `json:"Description"`
+			IsVerified     bool              `json:"IsVerified"`
+			IsFeatured     bool              `json:"IsFeatured"`
+			Logo           *strapiMediaField `json:"Logo"`
+			Cover          *strapiMediaField `json:"Cover"`
+			OperatingHours string            `json:"OperatingHours"`
+			Location       *struct {
+				Address     string   `json:"Address"`
+				Latitude    float64  `json:"Latitude"`
+				Longitude   float64  `json:"Longitude"`
+				Governorate *struct {
+					DocumentID string `json:"documentId"`
+					Name       string `json:"Name"`
+				} `json:"governorate"`
+				City *struct {
+					DocumentID string `json:"documentId"`
+					Name       string `json:"Name"`
+				} `json:"city"`
+			} `json:"Location"`
+			ContactInfo *struct {
+				Email      string `json:"Email"`
+				Phone      string `json:"Phone"`
+				Facebook   string `json:"Facebook"`
+				Instagram  string `json:"Instagram"`
+				Tiktok     string `json:"Tiktok"`
+				Whatsapp   string `json:"Whatsapp"`
+				X          string `json:"X"`
+				Youtube    string `json:"Youtube"`
+				WebsiteURL string `json:"WebsiteURL"`
+			} `json:"ContactInfo"`
+		} `json:"showroom"`
+	}
+
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal showroom: %w", err)
+	}
+
+	if result.Showroom == nil {
+		return nil, fmt.Errorf("showroom not found")
+	}
+
+	showroom := &models.DetailedShowroom{
+		ID:             result.Showroom.DocumentID,
+		Name:           result.Showroom.Name,
+		Description:    result.Showroom.Description,
+		IsVerified:     result.Showroom.IsVerified,
+		IsFeatured:     result.Showroom.IsFeatured,
+		Logo:           s.parseMediaField(result.Showroom.Logo),
+		Cover:          s.parseMediaField(result.Showroom.Cover),
+		OperatingHours: result.Showroom.OperatingHours,
+	}
+
+	// Parse location
+	if result.Showroom.Location != nil {
+		location := &models.Location{
+			Address:   result.Showroom.Location.Address,
+			Latitude:  result.Showroom.Location.Latitude,
+			Longitude: result.Showroom.Location.Longitude,
+		}
+
+		if result.Showroom.Location.Governorate != nil {
+			location.Governorate = &models.Governorate{
+				ID:   result.Showroom.Location.Governorate.DocumentID,
+				Name: result.Showroom.Location.Governorate.Name,
+			}
+		}
+
+		if result.Showroom.Location.City != nil {
+			location.City = &models.City{
+				ID:   result.Showroom.Location.City.DocumentID,
+				Name: result.Showroom.Location.City.Name,
+			}
+		}
+
+		showroom.Location = location
+	}
+
+	// Parse contact info
+	if result.Showroom.ContactInfo != nil {
+		showroom.ContactInfo = &models.ContactInfo{
+			Email:      result.Showroom.ContactInfo.Email,
+			Phone:      result.Showroom.ContactInfo.Phone,
+			Facebook:   result.Showroom.ContactInfo.Facebook,
+			Instagram:  result.Showroom.ContactInfo.Instagram,
+			Tiktok:     result.Showroom.ContactInfo.Tiktok,
+			Whatsapp:   result.Showroom.ContactInfo.Whatsapp,
+			X:          result.Showroom.ContactInfo.X,
+			Youtube:    result.Showroom.ContactInfo.Youtube,
+			WebsiteURL: result.Showroom.ContactInfo.WebsiteURL,
+		}
+	}
+
+	return showroom, nil
+}

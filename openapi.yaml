@@ -266,6 +266,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/cms/showrooms/{id}:
+    get:
+      tags:
+        - Showrooms
+      summary: Get showroom by ID
+      description: Retrieves detailed information about a specific showroom including location and contact info
+      operationId: getShowroomById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The showroom document ID
+          schema:
+            type: string
+          example: "uhw6ascspyb2ofunrn8arp5g"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedShowroom'
+        '404':
+          description: Showroom not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/cms/cars/{id}:
     get:
       tags:
@@ -606,7 +641,7 @@ components:
 
     Showroom:
       type: object
-      description: Showroom with detailed information
+      description: Showroom with basic information
       required:
         - id
         - name
@@ -635,6 +670,151 @@ components:
           example: true
         logo:
           $ref: '#/components/schemas/MediaField'
+
+    DetailedShowroom:
+      type: object
+      description: Showroom with full details including location and contact info
+      required:
+        - id
+        - name
+        - isVerified
+        - isFeatured
+      properties:
+        id:
+          type: string
+          description: Showroom document ID
+          example: "uhw6ascspyb2ofunrn8arp5g"
+        name:
+          type: string
+          description: Showroom name
+          example: "elemam"
+        description:
+          type: string
+          description: Showroom description
+          example: "Premium car dealership"
+        isVerified:
+          type: boolean
+          description: Whether the showroom is verified
+          example: true
+        isFeatured:
+          type: boolean
+          description: Whether the showroom is featured
+          example: true
+        logo:
+          $ref: '#/components/schemas/MediaField'
+        cover:
+          $ref: '#/components/schemas/MediaField'
+        operatingHours:
+          type: string
+          description: Operating hours
+          example: "Sun-Thu: 9AM-8PM, Fri-Sat: 10AM-6PM"
+        location:
+          $ref: '#/components/schemas/Location'
+        contactInfo:
+          $ref: '#/components/schemas/ContactInfo'
+
+    Location:
+      type: object
+      description: Location details for a showroom
+      properties:
+        address:
+          type: string
+          description: Street address
+          example: "123 Main Street"
+        governorate:
+          $ref: '#/components/schemas/Governorate'
+        city:
+          $ref: '#/components/schemas/City'
+        latitude:
+          type: number
+          format: double
+          description: GPS latitude
+          example: 30.0444
+        longitude:
+          type: number
+          format: double
+          description: GPS longitude
+          example: 31.2357
+
+    Governorate:
+      type: object
+      description: Governorate/State information
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Governorate document ID
+          example: "gov123"
+        name:
+          type: string
+          description: Governorate name
+          example: "Cairo"
+
+    City:
+      type: object
+      description: City information
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: City document ID
+          example: "city456"
+        name:
+          type: string
+          description: City name
+          example: "Nasr City"
+
+    ContactInfo:
+      type: object
+      description: Contact information for a showroom
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address
+          example: "info@elemam.com"
+        phone:
+          type: string
+          description: Phone number
+          example: "+20 123 456 7890"
+        facebook:
+          type: string
+          format: uri
+          description: Facebook URL
+          example: "https://facebook.com/elemam"
+        instagram:
+          type: string
+          format: uri
+          description: Instagram URL
+          example: "https://instagram.com/elemam"
+        tiktok:
+          type: string
+          format: uri
+          description: TikTok URL
+          example: "https://tiktok.com/@elemam"
+        whatsapp:
+          type: string
+          description: WhatsApp number
+          example: "+20 123 456 7890"
+        x:
+          type: string
+          format: uri
+          description: X (Twitter) URL
+          example: "https://x.com/elemam"
+        youtube:
+          type: string
+          format: uri
+          description: YouTube URL
+          example: "https://youtube.com/@elemam"
+        websiteURL:
+          type: string
+          format: uri
+          description: Website URL
+          example: "https://elemam.com"
 
     SimpleCarModel:
       type: object
@@ -1004,4 +1184,4 @@ components:
         error:
           type: string
           description: Error message
-          example: "Internal server error"
+          example: "Some error message"

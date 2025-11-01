@@ -229,4 +229,56 @@ const (
 			}
 		}
 	`
+
+	// GetShowroomByIDQuery fetches a single showroom by documentId with full details
+	GetShowroomByIDQuery = `
+		query GetShowroomProfile($documentId: ID!) {
+			showroom(documentId: $documentId) {
+				documentId
+				Logo {
+					documentId
+					url
+					width
+					height
+					formats
+				}
+				Cover {
+					documentId
+					url
+					width
+					height
+					formats
+				}
+				Name
+				Description
+				IsVerified
+				IsFeatured
+				OperatingHours
+				Location {
+					Address
+					governorate {
+						documentId
+						Name
+					}
+					city {
+						documentId
+						Name
+					}
+					Latitude
+					Longitude
+				}
+				ContactInfo {
+					Email
+					Phone
+					Facebook
+					Instagram
+					Tiktok
+					Whatsapp
+					X
+					Youtube
+					WebsiteURL
+				}
+			}
+		}
+	`
 )

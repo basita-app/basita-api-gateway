@@ -243,6 +243,20 @@ func main() {
 		return c.JSON(showrooms)
 	})
 
+	cmsGroup.Get("/showrooms/:id", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		id := c.Params("id")
+
+		showroom, err := showroomService.GetByID(ctx, id)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Showroom not found",
+			})
+		}
+
+		return c.JSON(showroom)
+	})
+
 	// Cache Management Endpoint
 	cacheSecretKey := os.Getenv("CACHE_SECRET_KEY")
 	app.Post("/api/cache/invalidate/cms", func(c *fiber.Ctx) error {
