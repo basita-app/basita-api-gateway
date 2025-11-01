@@ -116,6 +116,7 @@ func main() {
 	brandService := cms.NewBrandServiceGraphQL(cmsClient)
 	advertisementService := cms.NewAdvertisementServiceGraphQL(cmsClient)
 	carModelService := cms.NewCarModelServiceGraphQL(cmsClient)
+	showroomService := cms.NewShowroomServiceGraphQL(cmsClient)
 
 	app.Get("/uploads/:path", func(c *fiber.Ctx) error {
 		path := c.Params("path")
@@ -226,6 +227,20 @@ func main() {
 		}
 
 		return c.JSON(advertisement)
+	})
+
+	// Showrooms endpoints
+	cmsGroup.Get("/showrooms", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		showrooms, err := showroomService.GetAll(ctx)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(showrooms)
 	})
 
 	// Cache Management Endpoint

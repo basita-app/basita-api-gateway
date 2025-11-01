@@ -19,6 +19,8 @@ tags:
     description: Brand management endpoints
   - name: Car Models
     description: Car model management endpoints
+  - name: Showrooms
+    description: Showroom management endpoints
 
 paths:
   /health:
@@ -223,6 +225,40 @@ paths:
                   priceto: 1300000
                   marketpricefrom: 1320000
                   marketpriceto: 1320000
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cms/showrooms:
+    get:
+      tags:
+        - Showrooms
+      summary: Get all showrooms
+      description: Retrieves a list of all showrooms with their details
+      operationId: getShowrooms
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Showroom'
+              example:
+                - id: "uhw6ascspyb2ofunrn8arp5g"
+                  name: "elemam"
+                  description: "Premium car dealership"
+                  isVerified: true
+                  isFeatured: true
+                  logo:
+                    id: "w2iuapmcja2xdrligu0huj8n"
+                    width: 24
+                    height: 24
+                    url: "http://localhost:3001/uploads/new_car_59bca33b34.svg"
         '500':
           description: Internal server error
           content:
@@ -566,6 +602,38 @@ components:
           description: Brand name
           example: "Toyota"
         thumbnail:
+          $ref: '#/components/schemas/MediaField'
+
+    Showroom:
+      type: object
+      description: Showroom with detailed information
+      required:
+        - id
+        - name
+        - isVerified
+        - isFeatured
+      properties:
+        id:
+          type: string
+          description: Showroom document ID
+          example: "uhw6ascspyb2ofunrn8arp5g"
+        name:
+          type: string
+          description: Showroom name
+          example: "elemam"
+        description:
+          type: string
+          description: Showroom description
+          example: "Premium car dealership"
+        isVerified:
+          type: boolean
+          description: Whether the showroom is verified
+          example: true
+        isFeatured:
+          type: boolean
+          description: Whether the showroom is featured
+          example: true
+        logo:
           $ref: '#/components/schemas/MediaField'
 
     SimpleCarModel:

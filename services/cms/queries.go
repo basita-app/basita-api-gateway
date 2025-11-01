@@ -209,4 +209,24 @@ const (
 			}
 		}
 	`
+
+	// GetShowroomsQuery fetches all showrooms
+	GetShowroomsQuery = `
+		query GetShowrooms {
+			showrooms {
+				documentId
+				Name
+				Description
+				IsVerified
+				IsFeatured
+				Logo {
+					documentId
+					url
+					width
+					height
+					formats
+				}
+			}
+		}
+	`
 )
