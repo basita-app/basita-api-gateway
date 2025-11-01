@@ -1833,6 +1833,24 @@ components:
         session:
           $ref: '#/components/schemas/SessionInfo'
 
+    AuthResponse:
+      type: object
+      description: Authentication response for sign-up and sign-in
+      required:
+        - token
+        - user
+      properties:
+        redirect:
+          type: boolean
+          description: Indicates if a redirect is needed
+          example: false
+        token:
+          type: string
+          description: Session token
+          example: "if7jO3q6OZTDrla7ZIu9HS6B5kPdR9T3"
+        user:
+          $ref: '#/components/schemas/User'
+
     Error:
       type: object
       description: Error response
