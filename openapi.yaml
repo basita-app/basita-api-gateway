@@ -301,6 +301,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/cms/showrooms/{id}/variants:
+    get:
+      tags:
+        - Showrooms
+      summary: Get car variants by showroom ID
+      description: Retrieves all car variants available at a specific showroom with pricing information
+      operationId: getVariantsByShowroom
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The showroom document ID
+          schema:
+            type: string
+          example: "uhw6ascspyb2ofunrn8arp5g"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShowroomVariant'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/cms/cars/{id}:
     get:
       tags:
@@ -815,6 +846,40 @@ components:
           format: uri
           description: Website URL
           example: "https://elemam.com"
+
+    ShowroomVariant:
+      type: object
+      description: Car variant available at a specific showroom
+      required:
+        - id
+        - displayName
+        - price
+      properties:
+        id:
+          type: string
+          description: Variant document ID
+          example: "r3q8tcnki4uy1qpjn2x5lo6d"
+        displayName:
+          type: string
+          description: Display name of the variant
+          example: "Corolla 2025 Automatic/Active"
+        images:
+          type: array
+          description: Array of variant images
+          items:
+            $ref: '#/components/schemas/MediaField'
+        price:
+          type: integer
+          description: Showroom price for the variant
+          example: 1350000
+        minDownPayment:
+          type: integer
+          description: Minimum down payment
+          example: 450000
+        minInstallments:
+          type: integer
+          description: Minimum monthly installment
+          example: 35000
 
     SimpleCarModel:
       type: object

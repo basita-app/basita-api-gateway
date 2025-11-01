@@ -257,6 +257,21 @@ func main() {
 		return c.JSON(showroom)
 	})
 
+	// Get car variants by showroom ID
+	cmsGroup.Get("/showrooms/:id/variants", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		showroomID := c.Params("id")
+
+		variants, err := showroomService.GetCarVariantsByShowroomID(ctx, showroomID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(variants)
+	})
+
 	// Cache Management Endpoint
 	cacheSecretKey := os.Getenv("CACHE_SECRET_KEY")
 	app.Post("/api/cache/invalidate/cms", func(c *fiber.Ctx) error {

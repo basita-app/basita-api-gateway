@@ -99,3 +99,13 @@ type FeatureItem struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
 }
+
+// ShowroomVariant represents a variant available at a specific showroom
+type ShowroomVariant struct {
+	ID              string                 `json:"id"`
+	DisplayName     string                 `json:"displayName"`
+	Images          *MediaCollectionField  `json:"images,omitempty"`
+	Price           int                    `json:"price"`
+	MinDownPayment  int                    `json:"minDownPayment"`
+	MinInstallments int                    `json:"minInstallments"`
+}

@@ -281,4 +281,25 @@ const (
 			}
 		}
 	`
+
+	// GetCarVariantsByShowroomQuery fetches car variants for a specific showroom
+	GetCarVariantsByShowroomQuery = `
+		query GetCarVariantsByShowroom($showroomDocumentId: ID!) {
+			carVariants(filters: { ShowroomPricing: { showroom: { documentId: { eq: $showroomDocumentId } } } }) {
+				documentId
+				DisplayName
+				Images {
+					documentId
+						url
+						width
+						height
+						formats
+				}
+				ShowroomPricing(filters: { showroom: { documentId: { eq: $showroomDocumentId } } }) {
+					Price
+					MinimuDownpayment
+					MinimumInstallements
+				}
+			}
+		}`
 )

@@ -220,3 +220,61 @@ func (s *ShowroomServiceGraphQL) GetByID(ctx context.Context, documentId string)
 
 	return showroom, nil
 }
+
+// GetCarVariantsByShowroomID fetches car variants available at a specific showroom
+func (s *ShowroomServiceGraphQL) GetCarVariantsByShowroomID(ctx context.Context, showroomDocumentId string) ([]models.ShowroomVariant, error) {
+	variables := map[string]interface{}{
+		"showroomDocumentId": showroomDocumentId,
+	}
+
+	data, err := s.client.ExecuteGraphQL(ctx, GetCarVariantsByShowroomQuery, variables)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch variants: %w", err)
+	}
+
+	var result struct {
+		CarVariants []struct {
+			DocumentID      string             `json:"documentId"`
+			DisplayName     string             `json:"DisplayName"`
+			Images          []strapiMediaField `json:"Images"`
+			ShowroomPricing []struct {
+				Price           int `json:"Price"`
+				MinDownPayment  int `json:"MinimuDownpayment"`
+				MinInstallments int `json:"MinimumInstallements"`
+			} `json:"ShowroomPricing"`
+		} `json:"carVariants"`
+	}
+
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal variants: %w", err)
+	}
+
+	variants := make([]models.ShowroomVariant, 0, len(result.CarVariants))
+	for _, variant := range result.CarVariants {
+		showroomVariant := models.ShowroomVariant{
+			ID:          variant.DocumentID,
+			DisplayName: variant.DisplayName,
+		}
+
+		// Parse images
+		if len(variant.Images) > 0 {
+			images := make(models.MediaCollectionField, len(variant.Images))
+			for i, img := range variant.Images {
+				images[i] = *s.parseMediaField(&img)
+			}
+			showroomVariant.Images = &images
+		}
+
+		// Parse showroom pricing (should only be one since we filtered)
+		if len(variant.ShowroomPricing) > 0 {
+			pricing := variant.ShowroomPricing[0]
+			showroomVariant.Price = pricing.Price
+			showroomVariant.MinDownPayment = pricing.MinDownPayment
+			showroomVariant.MinInstallments = pricing.MinInstallments
+		}
+
+		variants = append(variants, showroomVariant)
+	}
+
+	return variants, nil
+}
