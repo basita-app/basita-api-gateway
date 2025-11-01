@@ -134,8 +134,6 @@ func main() {
 	showroomService := cms.NewShowroomServiceGraphQL(cmsClient)
 	governorateService := cms.NewGovernorateServiceGraphQL(cmsClient)
 	appVersionService := cms.NewAppVersionServiceGraphQL(cmsClient)
-	_ = governorateService // Service initialized but endpoint not yet added
-	_ = appVersionService  // Service initialized but endpoint not yet added
 
 	app.Get("/uploads/:path", func(c *fiber.Ctx) error {
 		path := c.Params("path")
@@ -144,6 +142,75 @@ func main() {
 		url := cmsUrlWithoutAPI + "/uploads/" + path
 		return proxy.Do(c, url)
 	})
+
+	// Init endpoint - fetches initial data in parallel
+	app.Get("/api/init", func(c *fiber.Ctx) error {
+		ctx := c.UserContext()
+
+		// Create channels to receive results
+		type result struct {
+			data interface{}
+			err  error
+		}
+
+		governoratesChan := make(chan result, 1)
+		appVersionChan := make(chan result, 1)
+		brandsChan := make(chan result, 1)
+		advertisementsChan := make(chan result, 1)
+
+		// Fetch governorates in parallel
+		go func() {
+			data, err := governorateService.GetAll(ctx)
+			governoratesChan <- result{data: data, err: err}
+		}()
+
+		// Fetch app version in parallel
+		go func() {
+			data, err := appVersionService.Get(ctx)
+			appVersionChan <- result{data: data, err: err}
+		}()
+
+		// Fetch brands in parallel
+		go func() {
+			data, err := brandService.GetSimplified(ctx)
+			brandsChan <- result{data: data, err: err}
+		}()
+
+		// Fetch advertisements in parallel
+		go func() {
+			data, err := advertisementService.GetAll(ctx)
+			advertisementsChan <- result{data: data, err: err}
+		}()
+
+		// Collect results
+		governoratesResult := <-governoratesChan
+		appVersionResult := <-appVersionChan
+		brandsResult := <-brandsChan
+		advertisementsResult := <-advertisementsChan
+
+		// Check for errors
+		if governoratesResult.err != nil {
+			log.Printf("Failed to fetch governorates: %v", governoratesResult.err)
+		}
+		if appVersionResult.err != nil {
+			log.Printf("Failed to fetch app version: %v", appVersionResult.err)
+		}
+		if brandsResult.err != nil {
+			log.Printf("Failed to fetch brands: %v", brandsResult.err)
+		}
+		if advertisementsResult.err != nil {
+			log.Printf("Failed to fetch advertisements: %v", advertisementsResult.err)
+		}
+
+		// Return combined response
+		return c.JSON(fiber.Map{
+			"governorates":   governoratesResult.data,
+			"appVersion":     appVersionResult.data,
+			"brands":         brandsResult.data,
+			"advertisements": advertisementsResult.data,
+		})
+	})
+
 	// CMS API Routes
 	cmsGroup := app.Group("/api/cms")
 

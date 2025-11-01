@@ -21,6 +21,8 @@ servers:
 tags:
   - name: Health
     description: Health check endpoint
+  - name: Initialization
+    description: Application initialization endpoint
   - name: Advertisements
     description: Advertisement management endpoints
   - name: Brands
@@ -48,6 +50,58 @@ paths:
               example:
                 status: "ok"
                 service: "api-gateway"
+
+  /api/init:
+    get:
+      tags:
+        - Initialization
+      summary: Initialize application data
+      description: Fetches initial data required for the application including governorates, app version, brands, and advertisements in parallel. This endpoint is optimized for performance and returns all data in a single request.
+      operationId: initializeApp
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Successful response with all initial data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitResponse'
+              example:
+                governorates:
+                  - id: "gov123"
+                    name: "Cairo"
+                    cities:
+                      - id: "city1"
+                        name: "Nasr City"
+                      - id: "city2"
+                        name: "Heliopolis"
+                appVersion:
+                  mobileAppVersion: "1.0.0"
+                  mobileAppBuildNumber: 1
+                  webVersion: "1.2.0"
+                brands:
+                  - id: "ickxh9k2oiqsy90ms7hdxtl6"
+                    title: "Toyota"
+                    thumbnail:
+                      id: "ky89f23cr0v1wbq5a7kgo4le"
+                      width: 1342
+                      height: 1100
+                      url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+                advertisements:
+                  - id: "zcp8md8k7nrciuwqcc083o5b"
+                    action: "brand/1"
+                    banner:
+                      id: "ky89f23cr0v1wbq5a7kgo4le"
+                      width: 1342
+                      height: 1100
+                      url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/cms/advertisements:
     get:
@@ -1164,6 +1218,71 @@ components:
           type: string
           description: Service name
           example: "api-gateway"
+
+    InitResponse:
+      type: object
+      description: Combined response containing all initial application data
+      properties:
+        governorates:
+          type: array
+          description: List of governorates with their cities
+          items:
+            $ref: '#/components/schemas/GovernorateWithCities'
+        appVersion:
+          $ref: '#/components/schemas/ApplicationVersion'
+        brands:
+          type: array
+          description: List of brands
+          items:
+            $ref: '#/components/schemas/SimpleBrand'
+        advertisements:
+          type: array
+          description: List of advertisements
+          items:
+            $ref: '#/components/schemas/Advertisement'
+
+    GovernorateWithCities:
+      type: object
+      description: Governorate with its cities
+      required:
+        - id
+        - name
+        - cities
+      properties:
+        id:
+          type: string
+          description: Governorate document ID
+          example: "gov123"
+        name:
+          type: string
+          description: Governorate name
+          example: "Cairo"
+        cities:
+          type: array
+          description: List of cities in this governorate
+          items:
+            $ref: '#/components/schemas/City'
+
+    ApplicationVersion:
+      type: object
+      description: Application version information
+      required:
+        - mobileAppVersion
+        - mobileAppBuildNumber
+        - webVersion
+      properties:
+        mobileAppVersion:
+          type: string
+          description: Mobile app version
+          example: "1.0.0"
+        mobileAppBuildNumber:
+          type: integer
+          description: Mobile app build number
+          example: 1
+        webVersion:
+          type: string
+          description: Web version
+          example: "1.2.0"
 
     SimpleCarModelRef:
       type: object

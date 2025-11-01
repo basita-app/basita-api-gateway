@@ -29,7 +29,7 @@ func (s *AppVersionServiceGraphQL) Get(ctx context.Context) (*models.Application
 	var result struct {
 		ApplicationVersion *struct {
 			MobileAppVersion     string `json:"MobileAppVersion"`
-			MobileAppBuildNumber string `json:"MobileAppBuildNumber"`
+			MobileAppBuildNumber int    `json:"MobileAppBuildNumber"`
 			WebVersion           string `json:"WebVersion"`
 		} `json:"applicationVersion"`
 	}
