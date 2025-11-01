@@ -272,6 +272,8 @@ type ComponentRepeatablesSpecs {
 input ComponentRepeatablesCarsFiltersInput {
   showroom: ShowroomFiltersInput
   Price: IntFilterInput
+  MinimuDownpayment: IntFilterInput
+  MinimumInstallements: IntFilterInput
   and: [ComponentRepeatablesCarsFiltersInput]
   or: [ComponentRepeatablesCarsFiltersInput]
   not: ComponentRepeatablesCarsFiltersInput
@@ -281,12 +283,16 @@ input ComponentRepeatablesCarsInput {
   id: ID
   showroom: ID
   Price: Int
+  MinimuDownpayment: Int
+  MinimumInstallements: Int
 }
 
 type ComponentRepeatablesCars {
   id: ID!
   showroom: Showroom
   Price: Int!
+  MinimuDownpayment: Int
+  MinimumInstallements: Int
 }
 
 input ComponentCommonLocationFiltersInput {

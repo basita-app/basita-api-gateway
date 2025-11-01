@@ -324,6 +324,150 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/cms/cars/{carId}/variants/{variantId}:
+    get:
+      tags:
+        - Car Models
+      summary: Get detailed variant by ID
+      description: Retrieves detailed information about a specific car variant including specs, features, showrooms, review, and catalog
+      operationId: getVariantById
+      parameters:
+        - name: carId
+          in: path
+          required: true
+          description: The car model document ID
+          schema:
+            type: string
+          example: "xtvnanfg7cmvws9llx2co0f9"
+        - name: variantId
+          in: path
+          required: true
+          description: The variant document ID
+          schema:
+            type: string
+          example: "r3q8tcnki4uy1qpjn2x5lo6d"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedVariant'
+              example:
+                id: "r3q8tcnki4uy1qpjn2x5lo6d"
+                title: "Automatic/Active"
+                images:
+                  - id: "ky89f23cr0v1wbq5a7kgo4le"
+                    width: 1342
+                    height: 1100
+                    url: "http://localhost:3001/uploads/toyota_logo_png_1_d871d2a03a.png"
+                    formats:
+                      thumbnail:
+                        width: 190
+                        height: 156
+                        url: "http://localhost:3001/uploads/thumbnail_toyota_logo_png_1_d871d2a03a.png"
+                pricefrom: 1300000
+                priceto: 1300000
+                marketpricefrom: 1320000
+                marketpriceto: 1320000
+                mindownpayment: 450000
+                mininstallments: 35000
+                warranty: "3years/100000KM"
+                model:
+                  id: "xtvnanfg7cmvws9llx2co0f9"
+                  title: "Corolla"
+                showrooms:
+                  - id: "uhw6ascspyb2ofunrn8arp5g"
+                    title: "elemam"
+                    thumbnail:
+                      id: "w2iuapmcja2xdrligu0huj8n"
+                      width: 24
+                      height: 24
+                      url: "http://localhost:3001/uploads/new_car_59bca33b34.svg"
+                    price: 1350000
+                    mindownpayment: 450000
+                    mininstallments: 35000
+                review:
+                  id: 1
+                  youtubeurl: "https://localhost:3000/api"
+                catalog:
+                  id: 1
+                  downloadurl: "https://localhost:3000/api"
+                specs:
+                  - id: 1
+                    label: "Motor"
+                    value: "1600CC"
+                  - id: 2
+                    label: "Transmission"
+                    value: "CVT"
+                  - id: 3
+                    label: "Acceleration"
+                    value: "12"
+                  - id: 4
+                    label: "AssembledIn"
+                    value: "Turkey"
+                  - id: 5
+                    label: "GroundClearanceInMM"
+                    value: "164"
+                  - id: 6
+                    label: "HeightInMM"
+                    value: "1435"
+                  - id: 7
+                    label: "Horsepower"
+                    value: "120"
+                  - id: 8
+                    label: "LengthInMM"
+                    value: "4630"
+                  - id: 9
+                    label: "LiterPerKM"
+                    value: "6.80"
+                  - id: 10
+                    label: "MaxSpeed"
+                    value: "189"
+                  - id: 11
+                    label: "Origin"
+                    value: "Japan"
+                  - id: 12
+                    label: "Speed"
+                    value: "4"
+                  - id: 13
+                    label: "TractionType"
+                    value: "Front Traction"
+                  - id: 14
+                    label: "TrunkSize"
+                    value: "470"
+                  - id: 15
+                    label: "WheelBase"
+                    value: "2700"
+                  - id: 16
+                    label: "WidthInMM"
+                    value: "1780"
+                  - id: 17
+                    label: "Seats"
+                    value: "5"
+                features:
+                  - id: 1
+                    label: "Power Steering"
+                    value: ""
+                  - id: 2
+                    label: "Air Conditioning"
+                    value: ""
+                  - id: 3
+                    label: "Electric mirrors"
+                    value: ""
+        '404':
+          description: Variant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     MediaFormat:
@@ -637,6 +781,151 @@ components:
           type: string
           description: Service name
           example: "api-gateway"
+
+    SimpleCarModelRef:
+      type: object
+      description: Simplified reference to a car model
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+          description: Car model document ID
+          example: "xtvnanfg7cmvws9llx2co0f9"
+        title:
+          type: string
+          description: Car model name
+          example: "Corolla"
+
+    SpecItem:
+      type: object
+      description: Specification item for a variant (values are converted to strings from mixed types)
+      required:
+        - id
+        - label
+        - value
+      properties:
+        id:
+          type: integer
+          description: Spec item ID (auto-incremented)
+          example: 1
+        label:
+          type: string
+          description: Specification label
+          enum:
+            - Motor
+            - Transmission
+            - Acceleration
+            - AssembledIn
+            - GroundClearanceInMM
+            - HeightInMM
+            - Horsepower
+            - LengthInMM
+            - LiterPerKM
+            - MaxSpeed
+            - Origin
+            - Speed
+            - TractionType
+            - TrunkSize
+            - WheelBase
+            - WidthInMM
+            - Seats
+          example: "Motor"
+        value:
+          type: string
+          description: Specification value (converted to string, may be numeric or text)
+          example: "1600CC"
+
+    FeatureItem:
+      type: object
+      description: Feature item for a variant (typically from a simple string array)
+      required:
+        - id
+        - label
+      properties:
+        id:
+          type: integer
+          description: Feature item ID (auto-incremented)
+          example: 1
+        label:
+          type: string
+          description: Feature name/label
+          example: "Power Steering"
+        value:
+          type: string
+          description: Feature value (typically empty for simple feature lists)
+          example: ""
+
+    DetailedVariant:
+      type: object
+      description: Detailed variant with all information including specs and features
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+          description: Variant document ID
+          example: "r3q8tcnki4uy1qpjn2x5lo6d"
+        title:
+          type: string
+          description: Variant name
+          example: "Automatic/Active"
+        images:
+          type: array
+          description: Array of variant/model images
+          items:
+            $ref: '#/components/schemas/MediaField'
+        pricefrom:
+          type: integer
+          description: Minimum price
+          example: 1300000
+        priceto:
+          type: integer
+          description: Maximum price
+          example: 1300000
+        marketpricefrom:
+          type: integer
+          description: Minimum market price
+          example: 1320000
+        marketpriceto:
+          type: integer
+          description: Maximum market price
+          example: 1320000
+        mindownpayment:
+          type: integer
+          description: Minimum down payment
+          example: 450000
+        mininstallments:
+          type: integer
+          description: Minimum monthly installment
+          example: 35000
+        warranty:
+          type: string
+          description: Warranty information
+          example: "3years/100000KM"
+        model:
+          $ref: '#/components/schemas/SimpleCarModelRef'
+        showrooms:
+          type: array
+          description: Showrooms selling this variant
+          items:
+            $ref: '#/components/schemas/SimpleShowroom'
+        review:
+          $ref: '#/components/schemas/ReviewItem'
+        catalog:
+          $ref: '#/components/schemas/CatalogItem'
+        specs:
+          type: array
+          description: Technical specifications (17 possible fields - Motor, Transmission, Acceleration, AssembledIn, GroundClearanceInMM, HeightInMM, Horsepower, LengthInMM, LiterPerKM, MaxSpeed, Origin, Speed, TractionType, TrunkSize, WheelBase, WidthInMM, Seats)
+          items:
+            $ref: '#/components/schemas/SpecItem'
+        features:
+          type: array
+          description: Feature list (simple string array converted to objects)
+          items:
+            $ref: '#/components/schemas/FeatureItem'
 
     Error:
       type: object

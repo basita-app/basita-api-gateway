@@ -144,4 +144,69 @@ const (
 			}
 		}
 	`
+
+	// GetCarVariantByIDQuery fetches a single car variant with all details
+	GetCarVariantByIDQuery = `
+		query GetCarVariant($documentId: ID!) {
+			carVariant(documentId: $documentId) {
+				documentId
+				Name
+				Price
+				Year
+				BrochureURL
+				ReviewLink
+				Warranty
+				MinimumDownPaymet
+				MinimumInstallments
+				car_model {
+					documentId
+					Name
+					Images {
+						documentId
+						url
+						width
+						height
+						formats
+					}
+				}
+				Specs {
+					Motor
+					Transmission
+					Acceleration
+					AssembledIn
+					GroundClearanceInMM
+					HeightInMM
+					Horsepower
+					LengthInMM
+					LiterPerKM
+					MaxSpeed
+					Origin
+					Speed
+					TractionType
+					Transmission
+					TrunkSize
+					WheelBase
+					WidthInMM
+					Seats
+				}
+				Features
+				ShowroomPricing {
+					Price
+					MinimuDownpayment
+					MinimumInstallements
+					showroom {
+						documentId
+						Name
+						Logo {
+							documentId
+							url
+							width
+							height
+							formats
+						}
+					}
+				}
+			}
+		}
+	`
 )

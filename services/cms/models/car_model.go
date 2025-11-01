@@ -59,3 +59,43 @@ type CatalogItem struct {
 	ID          int    `json:"id"`
 	DownloadURL string `json:"downloadurl"`
 }
+
+// DetailedVariant represents a detailed variant with all information
+type DetailedVariant struct {
+	ID              string                  `json:"id"`
+	Title           string                  `json:"title"`
+	Images          *MediaCollectionField   `json:"images,omitempty"`
+	PriceFrom       int                     `json:"pricefrom"`
+	PriceTo         int                     `json:"priceto"`
+	MarketPriceFrom int                     `json:"marketpricefrom"`
+	MarketPriceTo   int                     `json:"marketpriceto"`
+	MinDownPayment  int                     `json:"mindownpayment"`
+	MinInstallments int                     `json:"mininstallments"`
+	Warranty        string                  `json:"warranty"`
+	Model           *SimpleCarModelRef      `json:"model,omitempty"`
+	Showrooms       []SimpleShowroom        `json:"showrooms"`
+	Review          *ReviewItem             `json:"review,omitempty"`
+	Catalog         *CatalogItem            `json:"catalog,omitempty"`
+	Specs           []SpecItem              `json:"specs"`
+	Features        []FeatureItem           `json:"features"`
+}
+
+// SimpleCarModelRef is a simplified reference to a car model
+type SimpleCarModelRef struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+// SpecItem represents a specification item
+type SpecItem struct {
+	ID    int    `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// FeatureItem represents a feature item
+type FeatureItem struct {
+	ID    int    `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+}

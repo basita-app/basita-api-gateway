@@ -182,6 +182,21 @@ func main() {
 		return c.JSON(carModel)
 	})
 
+	// Get detailed variant by ID
+	cmsGroup.Get("/cars/:carId/variants/:variantId", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		variantID := c.Params("variantId")
+
+		variant, err := carModelService.GetVariantByID(ctx, variantID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Variant not found",
+			})
+		}
+
+		return c.JSON(variant)
+	})
+
 	// Advertisements endpoints
 	cmsGroup.Get("/advertisements", func(c *fiber.Ctx) error {
 		ctx := c.Context()

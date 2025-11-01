@@ -37,3 +37,4 @@ api-gateway
 # Logs
 *.log
 build-errors.log
+oldmd.md

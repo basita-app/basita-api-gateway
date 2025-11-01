@@ -390,3 +390,252 @@ func (s *CarModelServiceGraphQL) GetDetailedByID(ctx context.Context, carModelDo
 
 	return detailedModel, nil
 }
+
+// GetVariantByID fetches a detailed variant with all information
+func (s *CarModelServiceGraphQL) GetVariantByID(ctx context.Context, variantDocumentID string) (*models.DetailedVariant, error) {
+	variables := map[string]interface{}{
+		"documentId": variantDocumentID,
+	}
+
+	data, err := s.client.ExecuteGraphQL(ctx, GetCarVariantByIDQuery, variables)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch variant: %w", err)
+	}
+
+	var result struct {
+		CarVariant *struct {
+			DocumentID          string `json:"documentId"`
+			Name                string `json:"Name"`
+			Price               int    `json:"Price"`
+			Year                int    `json:"Year"`
+			BrochureURL         string `json:"BrochureURL"`
+			ReviewLink          string `json:"ReviewLink"`
+			Warranty            string `json:"Warranty"`
+			MinimumDownPayment  int    `json:"MinimumDownPaymet"`
+			MinimumInstallments int    `json:"MinimumInstallments"`
+			CarModel            *struct {
+				DocumentID string              `json:"documentId"`
+				Name       string              `json:"Name"`
+				Images     []strapiMediaField `json:"Images"`
+			} `json:"car_model"`
+			Specs *struct {
+				Motor               interface{} `json:"Motor"`
+				Transmission        interface{} `json:"Transmission"`
+				Acceleration        interface{} `json:"Acceleration"`
+				AssembledIn         interface{} `json:"AssembledIn"`
+				GroundClearanceInMM interface{} `json:"GroundClearanceInMM"`
+				HeightInMM          interface{} `json:"HeightInMM"`
+				Horsepower          interface{} `json:"Horsepower"`
+				LengthInMM          interface{} `json:"LengthInMM"`
+				LiterPerKM          interface{} `json:"LiterPerKM"`
+				MaxSpeed            interface{} `json:"MaxSpeed"`
+				Origin              interface{} `json:"Origin"`
+				Speed               interface{} `json:"Speed"`
+				TractionType        interface{} `json:"TractionType"`
+				TrunkSize           interface{} `json:"TrunkSize"`
+				WheelBase           interface{} `json:"WheelBase"`
+				WidthInMM           interface{} `json:"WidthInMM"`
+				Seats               interface{} `json:"Seats"`
+			} `json:"Specs"`
+			Features        interface{} `json:"Features"`
+			ShowroomPricing []struct {
+				Price               int `json:"Price"`
+				MinimuDownpayment   int `json:"MinimuDownpayment"`
+				MinimumInstallements int `json:"MinimumInstallements"`
+				Showroom            *struct {
+					DocumentID string            `json:"documentId"`
+					Name       string            `json:"Name"`
+					Logo       *strapiMediaField `json:"Logo"`
+				} `json:"showroom"`
+			} `json:"ShowroomPricing"`
+		} `json:"carVariant"`
+	}
+
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal variant: %w", err)
+	}
+
+	if result.CarVariant == nil {
+		return nil, fmt.Errorf("variant not found")
+	}
+
+	variant := result.CarVariant
+
+	// Build detailed variant response
+	detailedVariant := &models.DetailedVariant{
+		ID:              variant.DocumentID,
+		Title:           variant.Name,
+		PriceFrom:       variant.Price,
+		PriceTo:         variant.Price,
+		MarketPriceFrom: variant.Price + 20000,
+		MarketPriceTo:   variant.Price + 20000,
+		MinDownPayment:  variant.MinimumDownPayment,
+		MinInstallments: variant.MinimumInstallments,
+		Warranty:        variant.Warranty,
+		Showrooms:       make([]models.SimpleShowroom, 0),
+		Specs:           make([]models.SpecItem, 0),
+		Features:        make([]models.FeatureItem, 0),
+	}
+
+	// Set car model reference
+	if variant.CarModel != nil {
+		detailedVariant.Model = &models.SimpleCarModelRef{
+			ID:    variant.CarModel.DocumentID,
+			Title: variant.CarModel.Name,
+		}
+
+		// Use car model images for variant
+		if len(variant.CarModel.Images) > 0 {
+			images := make(models.MediaCollectionField, len(variant.CarModel.Images))
+			for i, img := range variant.CarModel.Images {
+				parsed := s.parseMediaField(&img)
+				if parsed != nil {
+					images[i] = *parsed
+				}
+			}
+			detailedVariant.Images = &images
+		}
+	}
+
+	// Set review if available
+	if variant.ReviewLink != "" {
+		detailedVariant.Review = &models.ReviewItem{
+			ID:         1,
+			YoutubeURL: variant.ReviewLink,
+		}
+	}
+
+	// Set catalog if available
+	if variant.BrochureURL != "" {
+		detailedVariant.Catalog = &models.CatalogItem{
+			ID:          1,
+			DownloadURL: variant.BrochureURL,
+		}
+	}
+
+	// Process showrooms
+	showroomMap := make(map[string]*models.SimpleShowroom)
+	for _, pricing := range variant.ShowroomPricing {
+		if pricing.Showroom != nil {
+			showroomDocID := pricing.Showroom.DocumentID
+			thumbnail := s.parseMediaField(pricing.Showroom.Logo)
+
+			// Use showroom-specific pricing if available, otherwise fall back to variant pricing
+			minDownPayment := pricing.MinimuDownpayment
+			if minDownPayment == 0 {
+				minDownPayment = variant.MinimumDownPayment
+			}
+			minInstallments := pricing.MinimumInstallements
+			if minInstallments == 0 {
+				minInstallments = variant.MinimumInstallments
+			}
+
+			if existing, exists := showroomMap[showroomDocID]; exists {
+				if pricing.Price < existing.Price {
+					existing.Price = pricing.Price
+					existing.MinDownPayment = minDownPayment
+					existing.MinInstallments = minInstallments
+				}
+			} else {
+				showroomMap[showroomDocID] = &models.SimpleShowroom{
+					ID:              showroomDocID,
+					Title:           pricing.Showroom.Name,
+					Thumbnail:       thumbnail,
+					Price:           pricing.Price,
+					MinDownPayment:  minDownPayment,
+					MinInstallments: minInstallments,
+				}
+			}
+		}
+	}
+
+	// Convert showroom map to slice
+	for _, showroom := range showroomMap {
+		detailedVariant.Showrooms = append(detailedVariant.Showrooms, *showroom)
+	}
+
+	// Process specs
+	if variant.Specs != nil {
+		specID := 1
+
+		// Helper to convert interface{} to string and add spec if not empty
+		addSpec := func(label string, value interface{}) {
+			if value == nil {
+				return
+			}
+			var strValue string
+			switch v := value.(type) {
+			case string:
+				strValue = v
+			case int:
+				strValue = fmt.Sprintf("%d", v)
+			case float64:
+				// Remove unnecessary decimal places
+				if v == float64(int(v)) {
+					strValue = fmt.Sprintf("%d", int(v))
+				} else {
+					strValue = fmt.Sprintf("%.2f", v)
+				}
+			default:
+				strValue = fmt.Sprintf("%v", v)
+			}
+
+			if strValue != "" {
+				detailedVariant.Specs = append(detailedVariant.Specs, models.SpecItem{
+					ID:    specID,
+					Label: label,
+					Value: strValue,
+				})
+				specID++
+			}
+		}
+
+		addSpec("Motor", variant.Specs.Motor)
+		addSpec("Transmission", variant.Specs.Transmission)
+		addSpec("Acceleration", variant.Specs.Acceleration)
+		addSpec("AssembledIn", variant.Specs.AssembledIn)
+		addSpec("GroundClearanceInMM", variant.Specs.GroundClearanceInMM)
+		addSpec("HeightInMM", variant.Specs.HeightInMM)
+		addSpec("Horsepower", variant.Specs.Horsepower)
+		addSpec("LengthInMM", variant.Specs.LengthInMM)
+		addSpec("LiterPerKM", variant.Specs.LiterPerKM)
+		addSpec("MaxSpeed", variant.Specs.MaxSpeed)
+		addSpec("Origin", variant.Specs.Origin)
+		addSpec("Speed", variant.Specs.Speed)
+		addSpec("TractionType", variant.Specs.TractionType)
+		addSpec("TrunkSize", variant.Specs.TrunkSize)
+		addSpec("WheelBase", variant.Specs.WheelBase)
+		addSpec("WidthInMM", variant.Specs.WidthInMM)
+		addSpec("Seats", variant.Specs.Seats)
+	}
+
+	// Process features
+	if variant.Features != nil {
+		// Features is typically a simple string array like ["Power Steering", "Air Conditioning"]
+		if featuresArray, ok := variant.Features.([]interface{}); ok {
+			for i, feature := range featuresArray {
+				// First check if it's a simple string (most common case)
+				if featureStr, ok := feature.(string); ok {
+					detailedVariant.Features = append(detailedVariant.Features, models.FeatureItem{
+						ID:    i + 1,
+						Label: featureStr,
+						Value: "",
+					})
+				} else if featureMap, ok := feature.(map[string]interface{}); ok {
+					// Fallback: handle object format {Name, Value}
+					label, _ := featureMap["Name"].(string)
+					value, _ := featureMap["Value"].(string)
+					if label != "" || value != "" {
+						detailedVariant.Features = append(detailedVariant.Features, models.FeatureItem{
+							ID:    i + 1,
+							Label: label,
+							Value: value,
+						})
+					}
+				}
+			}
+		}
+	}
+
+	return detailedVariant, nil
+}
