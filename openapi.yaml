@@ -195,6 +195,8 @@ paths:
       summary: Sign out
       description: Sign out the current user and invalidate the session
       operationId: signOut
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Successfully signed out
@@ -398,6 +400,8 @@ paths:
       summary: Get current session
       description: Retrieves the current user session information
       operationId: getSession
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Current session information
@@ -1009,6 +1013,15 @@ components:
           - ar
         default: en
         example: ar
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Session Token
+      description: |
+        Session token obtained from sign-up or sign-in endpoints.
+        Include the token in the Authorization header as: `Bearer <token>`
 
   schemas:
     MediaFormat:
