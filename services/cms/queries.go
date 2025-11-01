@@ -5,8 +5,8 @@ package cms
 const (
 	// GetBrandsQuery fetches all brands with simplified response
 	GetBrandsQuery = `
-		query GetBrands {
-			brands {
+		query GetBrands($locale: I18NLocaleCode) {
+			brands(locale: $locale) {
 				documentId
 				Name
 				Logo {
@@ -22,8 +22,8 @@ const (
 
 	// GetBrandByIDQuery fetches a single brand by documentId
 	GetBrandByIDQuery = `
-		query GetBrand($documentId: ID!) {
-			brand(documentId: $documentId) {
+		query GetBrand($documentId: ID!, $locale: I18NLocaleCode) {
+			brand(documentId: $documentId, locale: $locale) {
 				documentId
 				Name
 				Slug
@@ -40,8 +40,8 @@ const (
 
 	// GetCarModelsByBrandQuery fetches car models for a specific brand
 	GetCarModelsByBrandQuery = `
-		query GetCarModelsByBrand($brandDocumentId: ID!) {
-			carModels(filters: { brand: { documentId: { eq: $brandDocumentId } } }) {
+		query GetCarModelsByBrand($brandDocumentId: ID!, $locale: I18NLocaleCode) {
+			carModels(filters: { brand: { documentId: { eq: $brandDocumentId } } }, locale: $locale) {
 				documentId
 				Name
 				Images {
@@ -57,8 +57,8 @@ const (
 
 	// GetCarVariantsByModelQuery fetches variants with showrooms for a car model
 	GetCarVariantsByModelQuery = `
-		query GetCarVariants($carModelDocumentId: ID!) {
-			carVariants(filters: { car_model: { documentId: { eq: $carModelDocumentId } } }) {
+		query GetCarVariants($carModelDocumentId: ID!, $locale: I18NLocaleCode) {
+			carVariants(filters: { car_model: { documentId: { eq: $carModelDocumentId } } }, locale: $locale) {
 				documentId
 				Name
 				Price
@@ -91,8 +91,8 @@ const (
 
 	// GetCarModelByIDQuery fetches a single car model with images
 	GetCarModelByIDQuery = `
-		query GetCarModel($documentId: ID!) {
-			carModel(documentId: $documentId) {
+		query GetCarModel($documentId: ID!, $locale: I18NLocaleCode) {
+			carModel(documentId: $documentId, locale: $locale) {
 				documentId
 				Name
 				BodyType
@@ -111,8 +111,8 @@ const (
 
 	// GetAdvertisementsQuery fetches all advertisements
 	GetAdvertisementsQuery = `
-		query GetAdvertisements {
-			advertisements {
+		query GetAdvertisements($locale: I18NLocaleCode) {
+			advertisements(locale: $locale) {
 				documentId
 				Action
 				Banner {
@@ -129,8 +129,8 @@ const (
 
 	// GetAdvertisementByIDQuery fetches a single advertisement
 	GetAdvertisementByIDQuery = `
-		query GetAdvertisement($documentId: ID!) {
-			advertisement(documentId: $documentId) {
+		query GetAdvertisement($documentId: ID!, $locale: I18NLocaleCode) {
+			advertisement(documentId: $documentId, locale: $locale) {
 				documentId
 				Action
 				Banner {
@@ -147,8 +147,8 @@ const (
 
 	// GetCarVariantByIDQuery fetches a single car variant with all details
 	GetCarVariantByIDQuery = `
-		query GetCarVariant($documentId: ID!) {
-			carVariant(documentId: $documentId) {
+		query GetCarVariant($documentId: ID!, $locale: I18NLocaleCode) {
+			carVariant(documentId: $documentId, locale: $locale) {
 				documentId
 				Name
 				Price
@@ -212,8 +212,8 @@ const (
 
 	// GetShowroomsQuery fetches all showrooms
 	GetShowroomsQuery = `
-		query GetShowrooms {
-			showrooms {
+		query GetShowrooms($locale: I18NLocaleCode) {
+			showrooms(locale: $locale) {
 				documentId
 				Name
 				Description
@@ -232,8 +232,8 @@ const (
 
 	// GetShowroomByIDQuery fetches a single showroom by documentId with full details
 	GetShowroomByIDQuery = `
-		query GetShowroomProfile($documentId: ID!) {
-			showroom(documentId: $documentId) {
+		query GetShowroomProfile($documentId: ID!, $locale: I18NLocaleCode) {
+			showroom(documentId: $documentId, locale: $locale) {
 				documentId
 				Logo {
 					documentId
@@ -284,8 +284,8 @@ const (
 
 	// GetCarVariantsByShowroomQuery fetches car variants for a specific showroom
 	GetCarVariantsByShowroomQuery = `
-		query GetCarVariantsByShowroom($showroomDocumentId: ID!) {
-			carVariants(filters: { ShowroomPricing: { showroom: { documentId: { eq: $showroomDocumentId } } } }) {
+		query GetCarVariantsByShowroom($showroomDocumentId: ID!, $locale: I18NLocaleCode) {
+			carVariants(filters: { ShowroomPricing: { showroom: { documentId: { eq: $showroomDocumentId } } } }, locale: $locale) {
 				documentId
 				DisplayName
 				Images {

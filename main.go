@@ -2,6 +2,7 @@ package main
 
 import (
 	"api-gateway/pkg/cache"
+	"api-gateway/pkg/locale"
 	"api-gateway/services/cms"
 	"context"
 	"log"
@@ -36,6 +37,20 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New())
+
+	// Locale middleware - extracts Accept-Language header and adds to context
+	app.Use(func(c *fiber.Ctx) error {
+		acceptLanguage := c.Get("Accept-Language", "en")
+		userLocale := locale.ParseAcceptLanguage(acceptLanguage)
+		log.Printf("locale %s", userLocale)
+
+		// Add locale to the user context
+		ctx := c.UserContext()
+		ctx = locale.WithLocale(ctx, userLocale)
+		c.SetUserContext(ctx)
+
+		return c.Next()
+	})
 
 	// Health check route
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -130,7 +145,7 @@ func main() {
 
 	// Brands endpoints
 	cmsGroup.Get("/brands", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 
 		brands, err := brandService.GetSimplified(ctx)
 		if err != nil {
@@ -143,7 +158,7 @@ func main() {
 	})
 
 	cmsGroup.Get("/brands/:id", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		id := c.Params("id")
 
 		brand, err := brandService.GetByID(ctx, id)
@@ -158,7 +173,7 @@ func main() {
 
 	// Get car models by brand ID
 	cmsGroup.Get("/brands/:id/cars", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		brandID := c.Params("id")
 
 		carModels, err := carModelService.GetByBrandID(ctx, brandID)
@@ -173,7 +188,7 @@ func main() {
 
 	// Get detailed car model by ID
 	cmsGroup.Get("/cars/:id", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		id := c.Params("id")
 
 		carModel, err := carModelService.GetDetailedByID(ctx, id)
@@ -188,7 +203,7 @@ func main() {
 
 	// Get detailed variant by ID
 	cmsGroup.Get("/cars/:carId/variants/:variantId", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		variantID := c.Params("variantId")
 
 		variant, err := carModelService.GetVariantByID(ctx, variantID)
@@ -203,7 +218,7 @@ func main() {
 
 	// Advertisements endpoints
 	cmsGroup.Get("/advertisements", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 
 		advertisements, err := advertisementService.GetAll(ctx)
 		if err != nil {
@@ -216,7 +231,7 @@ func main() {
 	})
 
 	cmsGroup.Get("/advertisements/:id", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		id := c.Params("id")
 
 		advertisement, err := advertisementService.GetByID(ctx, id)
@@ -231,7 +246,7 @@ func main() {
 
 	// Showrooms endpoints
 	cmsGroup.Get("/showrooms", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 
 		showrooms, err := showroomService.GetAll(ctx)
 		if err != nil {
@@ -244,7 +259,7 @@ func main() {
 	})
 
 	cmsGroup.Get("/showrooms/:id", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		id := c.Params("id")
 
 		showroom, err := showroomService.GetByID(ctx, id)
@@ -259,7 +274,7 @@ func main() {
 
 	// Get car variants by showroom ID
 	cmsGroup.Get("/showrooms/:id/variants", func(c *fiber.Ctx) error {
-		ctx := c.Context()
+		ctx := c.UserContext()
 		showroomID := c.Params("id")
 
 		variants, err := showroomService.GetCarVariantsByShowroomID(ctx, showroomID)

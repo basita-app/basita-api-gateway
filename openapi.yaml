@@ -1,7 +1,15 @@
 openapi: 3.0.3
 info:
   title: Basita API Gateway - CMS Endpoints
-  description: API Gateway for CMS (Content Management System) operations including advertisements, brands, and car models
+  description: |
+    API Gateway for CMS (Content Management System) operations including advertisements, brands, and car models.
+
+    ## Internationalization
+    All endpoints support multiple languages via the `Accept-Language` header.
+    Supported languages: en (English), ar (Arabic).
+    Default: en
+
+    Example: `Accept-Language: ar`
   version: 1.0.0
   contact:
     name: API Support
@@ -571,6 +579,17 @@ paths:
                 $ref: '#/components/schemas/Error'
 
 components:
+  parameters:
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      description: Language preference for localized content (e.g., 'en', 'ar', 'en-US')
+      required: false
+      schema:
+        type: string
+        default: en
+        example: ar
+
   schemas:
     MediaFormat:
       type: object

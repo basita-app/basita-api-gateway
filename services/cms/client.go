@@ -2,6 +2,7 @@ package cms
 
 import (
 	"api-gateway/pkg/cache"
+	"api-gateway/pkg/locale"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -93,8 +94,19 @@ type GraphQLError struct {
 
 // ExecuteGraphQL executes a GraphQL query with caching support
 func (c *CMSClient) ExecuteGraphQL(ctx context.Context, query string, variables map[string]interface{}) (json.RawMessage, error) {
-	// Build cache key from query and variables
-	cacheKey := c.buildCacheKey(query, variables)
+	// Get locale from context
+	reqLocale := locale.FromContext(ctx)
+
+	// Add locale to variables if not already present
+	if variables == nil {
+		variables = make(map[string]interface{})
+	}
+	if _, hasLocale := variables["locale"]; !hasLocale {
+		variables["locale"] = reqLocale
+	}
+
+	// Build cache key from query, variables, and locale
+	cacheKey := c.buildCacheKey(query, variables, reqLocale)
 
 	// Check cache first
 	if cached, err := c.cache.Get(ctx, cacheKey); err == nil && cached != nil {
@@ -169,11 +181,12 @@ func (c *CMSClient) ExecuteGraphQL(ctx context.Context, query string, variables 
 	return graphqlResp.Data, nil
 }
 
-// buildCacheKey generates a cache key from the query and variables
-func (c *CMSClient) buildCacheKey(query string, variables map[string]interface{}) string {
+// buildCacheKey generates a cache key from the query, variables, and locale
+func (c *CMSClient) buildCacheKey(query string, variables map[string]interface{}, locale string) string {
 	// Create a deterministic string representation
 	var keyParts []string
 	keyParts = append(keyParts, query)
+	keyParts = append(keyParts, locale)
 
 	if variables != nil {
 		// Marshal variables to JSON for consistent key generation
