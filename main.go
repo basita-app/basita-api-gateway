@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
+	"github.com/goccy/go-json"
 )
 
 func main() {
@@ -27,6 +28,8 @@ func main() {
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		AppName: "API Gateway",
+		JSONEncoder: json.Marshal,
+		JSONDecoder: json.Unmarshal,
 	})
 
 	// Middleware
