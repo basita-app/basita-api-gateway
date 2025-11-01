@@ -132,6 +132,10 @@ func main() {
 	advertisementService := cms.NewAdvertisementServiceGraphQL(cmsClient)
 	carModelService := cms.NewCarModelServiceGraphQL(cmsClient)
 	showroomService := cms.NewShowroomServiceGraphQL(cmsClient)
+	governorateService := cms.NewGovernorateServiceGraphQL(cmsClient)
+	appVersionService := cms.NewAppVersionServiceGraphQL(cmsClient)
+	_ = governorateService // Service initialized but endpoint not yet added
+	_ = appVersionService  // Service initialized but endpoint not yet added
 
 	app.Get("/uploads/:path", func(c *fiber.Ctx) error {
 		path := c.Params("path")

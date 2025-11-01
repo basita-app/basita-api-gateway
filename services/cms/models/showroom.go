@@ -57,3 +57,10 @@ type ContactInfo struct {
 	Youtube    string `json:"youtube,omitempty"`    // YouTube URL
 	WebsiteURL string `json:"websiteURL,omitempty"` // Website URL
 }
+
+// GovernorateWithCities represents a governorate with its cities
+type GovernorateWithCities struct {
+	ID     string  `json:"id"`     // documentId from Strapi
+	Name   string  `json:"name"`   // Governorate name
+	Cities []City  `json:"cities"` // List of cities in this governorate
+}

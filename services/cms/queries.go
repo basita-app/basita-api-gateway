@@ -302,4 +302,29 @@ const (
 				}
 			}
 		}`
+
+	// GetGovernoratesQuery fetches all governorates with their cities
+	GetGovernoratesQuery = `
+		query GetGovernates($locale: I18NLocaleCode) {
+			governorates(locale: $locale) {
+				documentId
+				Name
+				cities {
+					documentId
+					Name
+				}
+			}
+		}
+	`
+
+	// GetAppVersionQuery fetches application version information
+	GetAppVersionQuery = `
+		query AppVersion {
+			applicationVersion {
+				MobileAppVersion
+				MobileAppBuildNumber
+				WebVersion
+			}
+		}
+	`
 )
