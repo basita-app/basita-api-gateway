@@ -56,6 +56,8 @@ paths:
       summary: Get all advertisements
       description: Retrieves a list of all advertisements with their banners
       operationId: getAdvertisements
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -97,6 +99,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/cms/advertisements/{id}:
+    get:
+      tags:
+        - Advertisements
+      summary: Get advertisement by ID
+      description: Retrieves a single advertisement by its document ID
+      operationId: getAdvertisementById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The advertisement document ID
+          schema:
+            type: string
+          example: "zcp8md8k7nrciuwqcc083o5b"
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Advertisement'
+        '404':
+          description: Advertisement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/cms/brands:
     get:
       tags:
@@ -104,6 +142,8 @@ paths:
       summary: Get all brands
       description: Retrieves a simplified list of all brands with their logos
       operationId: getBrands
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -160,6 +200,7 @@ paths:
           schema:
             type: string
           example: "ickxh9k2oiqsy90ms7hdxtl6"
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -195,6 +236,7 @@ paths:
           schema:
             type: string
           example: "ickxh9k2oiqsy90ms7hdxtl6"
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -247,6 +289,8 @@ paths:
       summary: Get all showrooms
       description: Retrieves a list of all showrooms with their details
       operationId: getShowrooms
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -289,6 +333,7 @@ paths:
           schema:
             type: string
           example: "uhw6ascspyb2ofunrn8arp5g"
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -324,6 +369,7 @@ paths:
           schema:
             type: string
           example: "uhw6ascspyb2ofunrn8arp5g"
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -355,6 +401,7 @@ paths:
           schema:
             type: string
           example: "xtvnanfg7cmvws9llx2co0f9"
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -456,6 +503,7 @@ paths:
           schema:
             type: string
           example: "r3q8tcnki4uy1qpjn2x5lo6d"
+        - $ref: '#/components/parameters/AcceptLanguage'
       responses:
         '200':
           description: Successful response
@@ -583,10 +631,13 @@ components:
     AcceptLanguage:
       name: Accept-Language
       in: header
-      description: Language preference for localized content (e.g., 'en', 'ar', 'en-US')
+      description: Language preference for localized content
       required: false
       schema:
         type: string
+        enum:
+          - en
+          - ar
         default: en
         example: ar
 
